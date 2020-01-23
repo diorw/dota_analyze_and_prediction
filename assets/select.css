@@ -1,0 +1,140 @@
+.iyjHnf {
+    width: 100%;
+    overflow-x: scroll;
+    white-space: nowrap;
+    min-height: 98px;
+    margin-top: 10px;
+    background: rgba(0, 0, 0, 0.27);
+    padding: 3px;
+}
+
+.gZpUvw {
+    display: inline-block;
+    position: relative;
+    line-height: 0px;
+}
+
+.gZpUvw .name-overlay {
+    position: absolute;
+    top: 0px;
+    bottom: 0px;
+    right: 0px;
+    left: 0px;
+    background: linear-gradient(transparent 60%, rgba(0, 0, 0, 0.7));
+}
+
+.gZpUvw .ts-container {
+    opacity: 0;
+    position: absolute;
+    top: 0px;
+    width: 100%;
+    height: 100%;
+    white-space: normal;
+    transition: all 0.1s ease-out 0s;
+}
+.gZpUvw .ts {
+    display: inline-flex;
+    -webkit-box-align: center;
+    align-items: center;
+    -webkit-box-pack: center;
+    justify-content: center;
+    width: 50%;
+    height: 100%;
+    line-height: 16px;
+    color: rgb(158, 152, 152);
+    font-size: 13px;
+    word-break: break-word;
+    white-space: normal;
+    text-align: center;
+    cursor: pointer;
+    vertical-align: top;
+    background: rgba(0, 0, 0, 0.8);
+    transition: all 0.1s ease-out 0s;
+}
+.gZpUvw .ts:hover {
+    color: white;
+    text-shadow: black 1px 1px 1px;
+    background: rgba(23, 59, 90, 0.8);
+}
+.gZpUvw img {
+    height: 80px;
+}
+.gZpUvw .name-overlay .team-indicator {
+    position: absolute;
+    top: 10px;
+    opacity: 0.8;
+    text-shadow: black 1px 1px 2px;
+    font-size: 15px;
+}
+.gZpUvw .name-overlay .name {
+    position: absolute;
+    bottom: 10px;
+    text-align: center;
+    width: 100%;
+    font-size: 14px;
+}
+.gZpUvw .name-overlay .team-indicator.team-a {
+    left: 10px;
+}
+.gZpUvw .name-overlay .team-indicator.team-b {
+    right: 10px;
+}
+
+.dnZKxn .main-section {
+    margin-bottom: 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.28);
+}
+
+.clNgdz {
+    margin-top: 15px;
+    margin-bottom: 5px;
+    margin-left: 3px;
+}
+.clNgdz .title {
+    font-size: 20px;
+    text-shadow: black 2px 1px 2px;
+}
+.clNgdz .subtitle {
+    margin-left: 5px;
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.6);
+}
+.query_div {
+    font-size: 16px;
+    line-height: 24px;
+    width: 150px;
+    height: 48px;
+    display: inline-block;
+    position: relative;
+    background-color: transparent;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Droid Sans", Ubuntu, Cantarell, "Fira Sans", Helvetica, Arial, sans-serif;
+    transition: height 200ms cubic-bezier(0.23, 1, 0.32, 1) 0ms;
+    cursor: auto;
+}
+.query_div .query_hint {
+    position: absolute;
+    opacity: 1;
+    color: rgba(255, 255, 255, 0.3);
+    transition: all 450ms cubic-bezier(0.23, 1, 0.32, 1) 0ms;
+    bottom: 12px;
+}
+.query_div .query_input {
+    padding: 0px;
+    position: relative;
+    width: 100%;
+    border: none;
+    outline: none;
+    background-color: rgba(0, 0, 0, 0);
+    color: rgba(255, 255, 255, 0.87);
+    cursor: inherit;
+    font: inherit;
+    opacity: 1; -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+    height: 100%;
+}
+.query_body .reset_button {
+    display: inline-block;
+    font-size: 22px;
+    opacity: 0.5;
+    cursor: pointer;
+    margin-left: 10px;
+}
