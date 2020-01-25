@@ -1,0 +1,44 @@
+.navigation_root {
+    height: 56px;
+    left: 0px;
+    position: fixed;
+    top: 0px;
+    width: 100%;
+    z-index: 100;
+    background-color: rgba(0, 0, 0, 0.37) !important;
+    padding: 8px 16px !important;
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+    background-color: rgb(232, 0, 82);
+    height: 56px;
+    padding: 0px 24px;
+    display: flex;
+    justify-content: space-between;
+}
+.navigation_label {
+    display: flex;
+    -webkit-box-align: center;
+    align-items: center;
+    -webkit-box-pack: center;
+    justify-content: center;
+}
+.navigation_text_group {
+    display: flex;
+    -webkit-box-align: center;
+    align-items: center;
+    -webkit-box-pack: center;
+    justify-content: center;
+}
+.navigation_text {
+    display: flex;
+    flex-direction: column;
+    font-weight: 400;
+    height: 100%;
+    -webkit-box-pack: center;
+    justify-content: center;
+    text-align: center;
+    margin: 0px 12px;
+}
+.navigation_text a{
+    color: rgba(255, 255, 255, 0.87);
+}
