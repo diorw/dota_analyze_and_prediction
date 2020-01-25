@@ -21,6 +21,14 @@ html.Div([
                                             html.Div(
                                                 html.A("预测",href="/predict"),
                                                 className="navigation_text"
+                                            ),
+                                            html.Div(
+                                                html.A("模型训练",href="/train"),
+                                                className="navigation_text"
+                                            ),
+                                            html.Div(
+                                                html.A("数据采集",href="/crawl"),
+                                                className="navigation_text"
                                             )
                                         ],
 
@@ -66,6 +74,14 @@ index_page = html.Div([
                                             html.Div(
                                                 html.A("预测",href="/predict"),
                                                 className="navigation_text"
+                                            ),
+                                            html.Div(
+                                                html.A("模型训练",href="/train"),
+                                                className="navigation_text"
+                                            ),
+                                            html.Div(
+                                                html.A("数据采集",href="/crawl"),
+                                                className="navigation_text"
                                             )
                                         ],
 
@@ -100,5 +116,5 @@ def display_page(pathname):
 
 
 if __name__ == '__main__':
-    #print(generator_index())
+
     app.run_server(debug=True)

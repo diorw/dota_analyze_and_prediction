@@ -1,18 +1,16 @@
-import dash
 import os
 import dash_core_components as dcc
 import dash_html_components as html
-import pandas as pd
-import numpy as np
-import dash_html_components as html
 from app import app
+from dash.dependencies import Input, Output
 
-
-def generate_select():
+def generate_select(hero_name = None):
     files = os.listdir("assets/hero_icon")
     model = []
     for file in files:
         imgsrc = "assets/hero_icon/"+file
+        if hero_name is not None and not str(file).startswith(hero_name) :
+            continue
         hero_block = html.Div(className="gZpUvw",
                               children = [
                                   html.Div(className="name-overlay",
@@ -47,8 +45,8 @@ predict_layout = html.Div(
             children=html.Div(
                 className="main-section",
                     children = html.Div(className="fWisXZ",
-                            children= html.Div(className="dnZKxn",children=
-                                        [html.Div(
+                            children= html.Div(className="dnZKxn",
+                                        children=[html.Div(
                                             [html.Span("Hero Combos",className="title"),
                                             html.Span("Search for hero combinations in public and professional matches",className="subtitle")]
                                             ,className="clNgdz"
@@ -57,7 +55,8 @@ predict_layout = html.Div(
                                             children=
                                             [
                                                 html.Div(className="gZpUvw",
-                                                    children = generate_select()
+                                                    id = "hero_list",
+                                                    children = generate_select(None)
                                             )
                                             ],className="iyjHnf"
                                         ),
@@ -66,12 +65,12 @@ predict_layout = html.Div(
                                                 html.Div(
                                                     className = "query_div",
                                                     children= [
-                                                        html.Div(
-                                                            "英雄筛选",
-                                                            className= "query_hint"
-                                                        ),
+                                                        # html.Div(
+                                                        #     "英雄筛选",
+                                                        #     className= "query_hint"
+                                                        # ),
                                                         # input
-                                                        dcc.Input(id = "query_input",type="text",className="query_input")
+                                                        dcc.Input(id = "query_input",type="text",className="query_input",placeholder="英雄筛选")
 
 
                                                     ]
@@ -94,7 +93,23 @@ predict_layout = html.Div(
                                                               ])
 
                                                  ]
-                                                 )
+                                                 ),
+                                        html.Div(
+                                            children=
+                                                html.Div(
+                                                    className="submit_block",
+                                                    children = html.Button(id = 'submit_query',className="submit_button",tabIndex="0",type="button",
+                                                            children= html.Div(
+                                                                children=html.Div(
+                                                                    className="submit_button_div",
+                                                                    children=html.Span("提交",className="submit_button_div_span")
+                                                                )
+                                                            )
+                                                        )
+                                                    ),
+                                            className = "submit_section"
+                                        )
+
                                         ]
                             )
                     )
@@ -106,7 +121,12 @@ predict_layout = html.Div(
 # style 属性是一个字典
 # style内的属性是驼峰格式的
 # 像素值的px可以省略
+@app.callback(
+    Output(component_id='hero_list', component_property='children'),
+    [Input(component_id='query_input', component_property='value')]
+)
+def update_output_div(input_value):
+    return generate_select(input_value)
 
 if __name__ == "__main__":
-    #generate_select()
     app.run_server(debug=False)

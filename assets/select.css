@@ -138,3 +138,59 @@
     cursor: pointer;
     margin-left: 10px;
 }
+.submit_block {
+    color: rgba(255, 255, 255, 0.87);
+    background-color: rgb(22, 40, 62);
+    transition: all 450ms cubic-bezier(0.23, 1, 0.32, 1) 0ms;
+    box-sizing: border-box;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Droid Sans", Ubuntu, Cantarell, "Fira Sans", Helvetica, Arial, sans-serif;
+    -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+    box-shadow: rgba(0, 0, 0, 0.12) 0px 1px 6px, rgba(0, 0, 0, 0.12) 0px 1px 4px;
+    border-radius: 2px;
+    display: block;
+    min-width: 88px;
+    margin-top: 5px;
+}
+.submit_button {
+    border: 10px;
+    box-sizing: border-box;
+    display: inline-block;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Droid Sans", Ubuntu, Cantarell, "Fira Sans", Helvetica, Arial, sans-serif;
+    -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+    cursor: pointer;
+    text-decoration: none;
+    margin: 0px;
+    padding: 0px;
+    outline: none;
+    font-size: inherit;
+    font-weight: inherit;
+    position: relative;
+    height: 38px;
+    line-height: 38px;
+    width: 100%;
+    border-radius: 2px;
+    transition: all 450ms cubic-bezier(0.23, 1, 0.32, 1) 0ms;
+    background-color: rgba(23, 59, 90, 0.8);
+    text-align: center;
+}
+.submit_button_div {
+    height: 38px; border-radius: 2px; transition: all 450ms cubic-bezier(0.23, 1, 0.32, 1) 0ms; top: 0px;
+}
+.submit_button_div_span {
+    position: relative;
+    opacity: 1;
+    font-size: 14px;
+    letter-spacing: 0px;
+    text-transform: uppercase;
+    font-weight: 400;
+    margin: 0px;
+    user-select: none;
+    padding-left: 16px;
+    padding-right: 16px;
+    color: rgba(255, 255, 255, 0.87);
+}
+.submit-section {
+    display: inline-block;
+    margin-bottom: 23px;
+    margin-top: 15px;
+}
