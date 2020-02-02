@@ -34,10 +34,11 @@ def generate_select(hero_name = None):
         model.append(hero_block)
     return model
 
-def generate_placeholder(A_or_B):
+def generate_placeholder(*args):
     model = []
+    A_or_B = args[0]
     for i in range(5):
-        model.append(html.Div(id = str(i)+"_"+A_or_B,className="hero-placeholder hero-img"))
+        model.append(html.Img(id = str(i)+"_"+A_or_B,className="hero-placeholder hero-img"))
 
     return html.Div(children=model)
 
@@ -63,6 +64,7 @@ predict_layout = html.Div(
                                         html.Div(
                                             children= [
                                                 html.Div(
+                                                    id = 'query_div',
                                                     className = "query_div",
                                                     children= [
                                                         # html.Div(
@@ -74,9 +76,7 @@ predict_layout = html.Div(
 
 
                                                     ]
-                                                ),
-                                                html.Button("X",className="reset_button",role = "button",tabIndex="0")
-
+                                                )
                                             ],
                                             className = "query_body"
                                         ),
@@ -84,12 +84,18 @@ predict_layout = html.Div(
                                                  children=[
                                                      html.Div(className="team-container",children=
                                                         [html.Div("Team A",className="team-title team-a"),
-                                                         generate_placeholder("A")
-                                                         ]),
+                                                         generate_placeholder("A"),
+                                                         html.Div(id = 'hidden_A',style={"display":"none"})
+                                                         ]
+
+                                                        ),
+
                                                      html.Div("vs.",className="seperator"),
                                                      html.Div(className="team-container",
                                                               children=[html.Div("Team B",className="team-title team-b"),
-                                                                        generate_placeholder("B")
+                                                                        generate_placeholder("B"),
+                                                                        html.Div(id='hidden_B',
+                                                                                 style={"display": "none"})
                                                               ])
 
                                                  ]
@@ -127,6 +133,8 @@ predict_layout = html.Div(
 )
 def update_output_div(input_value):
     return generate_select(input_value)
+
+
 
 if __name__ == "__main__":
     app.run_server(debug=False)
