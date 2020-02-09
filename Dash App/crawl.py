@@ -210,11 +210,11 @@ app.layout = html.Div(
                     [dcc.Graph(id="pie_graph")],
                     className="pretty_container seven columns",
                 )
-                # ,
-                # html.Div(
-                #     [dcc.Graph(id="aggregate_graph")],
-                #     className="pretty_container five columns",
-                # ),
+                ,
+                html.Div(
+                    [dcc.Graph(id="aggregate_graph")],
+                    className="pretty_container five columns",
+                ),
             ],
             className="row flex-display",
         ),
@@ -223,17 +223,6 @@ app.layout = html.Div(
     style={"display": "flex", "flex-direction": "column"},
 )
 
-# #
-# # Helper functions
-# def human_format(num):
-#     if num == 0:
-#         return "0"
-#
-#     magnitude = int(math.log(num, 1000))
-#     mantissa = str(int(num / (1000 ** magnitude)))
-#     return mantissa + ["", "K", "M", "G", "T", "P"][magnitude]
-#
-#
 
 
 # 比赛时长 、 比赛类型
@@ -248,6 +237,35 @@ def filter_dataframe(df, match_duration, match_type):
     ]
     return dff_result
 
+@app.callback(
+    Output("aggregate_graph", "figure"),
+    [
+        Input("match_duration_slider", "value"),
+        Input("match_type_selector", "value"),
+    ],
+
+)
+def produce_aggregate(match_duration,match_type):
+    layout_aggregate = copy.deepcopy(layout)
+
+    dff = filter_dataframe(df, match_duration, match_type)
+    g = dff[["duration", "start_time"]]
+    g['start_time'] = g.apply(lambda row: format_starttime(row['start_time']), axis=1)
+    g['duration'] = g.apply(lambda row:int(row['duration']),axis = 1)
+    start = g.groupby("duration").count()
+    start.columns = ['count']
+    layout_aggregate["title"] = "比赛时长分布"
+    data = [
+
+        dict(
+            type="bar",
+            x=start.index,
+            y=start['count'],
+            name="比赛时长",
+        )
+    ]
+    figure = dict(data=data, layout=layout_aggregate)
+    return figure
 #
 # # def produce_individual(api_well_num):
 # #     try:
@@ -575,8 +593,6 @@ def make_pie_figure(match_duration, match_type):
 
     dff = filter_dataframe(df, match_duration, match_type)
     aggregate = dff.groupby(["win"]).count()
-    print(aggregate)
-    # aggregate.columns = ['count']
     tianhui = aggregate['match_id'].iloc[0]
     yeyan = aggregate['match_id'].iloc[1]
     data = [
@@ -637,7 +653,7 @@ def make_count_figure(match_duration, match_type):
 
     layout_count = copy.deepcopy(layout)
 
-    dff = filter_dataframe(df,[20, 45],match_type)
+    dff = filter_dataframe(df,match_duration,match_type)
     g = dff[["duration", "start_time"]]
     g['start_time'] = g.apply(lambda row:format_starttime(row['start_time']),axis=1)
     start = g.groupby("start_time").count()
@@ -664,12 +680,12 @@ def make_count_figure(match_duration, match_type):
             type="bar",
             x=start.index,
             y=start['count'],
-            name="比赛时长",
+            name="比赛日期",
             #marker=dict(color=colors),
         ),
     ]
 
-    layout_count["title"] = "比赛时长分布"
+    layout_count["title"] = "比赛日期"
     layout_count["dragmode"] = "select"
     layout_count["showlegend"] = False
     layout_count["autosize"] = True
