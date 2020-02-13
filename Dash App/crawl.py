@@ -65,9 +65,24 @@ columns = [	"match_id" ,
 	"version"]
 
 df.columns = columns
-
 df = df.sort_values(by = 'duration',inplace=False)
 df = df[df['start_time'] > 0]
+
+relation_df = pd.read_csv(DATA_PATH.joinpath("hero_relationship.csv"), low_memory=False,header = None)
+relation_df_columns = ['hero_id','target_hero_id','win_rate','update_ymd']
+relation_df.columns = relation_df_columns
+hero_id_list = list(relation_df['hero_id'].values)
+hero_id_list = list(set(hero_id_list))
+
+hero_stats_df = pd.read_csv(DATA_PATH.joinpath("hero_stats.csv"), low_memory=False,header = None)
+hero_stats_df_columns = ['hero_id','pro_pick','pro_win','hero_name_ch','type']
+hero_stats_df.columns = hero_stats_df_columns
+hero_stats_df['win_rate'] = hero_stats_df['pro_win']/hero_stats_df['pro_pick']
+hero_df = hero_stats_df.sort_values("win_rate",inplace=False)
+
+
+
+
 
 
 layout = dict(
@@ -190,30 +205,30 @@ app.layout = html.Div(
             ],
             className="row flex-display",
         ),
-        #,
-        # html.Div(
-        #     [
-        #         html.Div(
-        #             [dcc.Graph(id="main_graph")],
-        #             className="pretty_container seven columns",
-        #         ),
-        #         html.Div(
-        #             [dcc.Graph(id="individual_graph")],
-        #             className="pretty_container five columns",
-        #         ),
-        #     ],
-        #     className="row flex-display",
-        # ),
+        html.Div(
+            [
+                html.Div(
+                    [dcc.Graph(id="main_graph")],
+                    className="pretty_container five columns",
+                )
+                ,
+                html.Div(
+                    [dcc.Graph(id="individual_graph")],
+                    className="pretty_container seven columns",
+                ),
+            ],
+            className="row flex-display",
+        ),
         html.Div(
             [
                 html.Div(
                     [dcc.Graph(id="pie_graph")],
-                    className="pretty_container seven columns",
+                    className="pretty_container five columns",
                 )
                 ,
                 html.Div(
                     [dcc.Graph(id="aggregate_graph")],
-                    className="pretty_container five columns",
+                    className="pretty_container seven columns",
                 ),
             ],
             className="row flex-display",
@@ -222,6 +237,73 @@ app.layout = html.Div(
     id="mainContainer",
     style={"display": "flex", "flex-direction": "column"},
 )
+
+@app.callback(
+    Output("main_graph", "figure"),
+    [
+        Input("match_duration_slider", "value"),
+        Input("match_type_selector", "value"),
+    ],
+
+)
+def produce_main(match_duration,match_type):
+    result = []
+    for i in hero_id_list:
+        z = []
+        for j in hero_id_list:
+            if (i == j):
+                z.append(None)
+            else:
+                win_rate = relation_df[(relation_df['hero_id'] == i) & (relation_df['target_hero_id'] == j)][
+                    'win_rate'].values.tolist()
+
+                if (win_rate != []):
+                    z.append(win_rate[0])
+                else:
+                    z.append(None)
+        result.append(z)
+    layout_main = copy.deepcopy(layout)
+    data = [
+        dict (
+            type = 'heatmap',
+            x = hero_id_list,
+            y = hero_id_list,
+            z = result,
+            hoverongaps=False
+        )
+    ]
+    layout_main['title'] = '英雄相对胜率'
+    figure = dict(data = data,layout = layout_main)
+    return figure
+
+@app.callback(
+    Output("individual_graph", "figure"),
+    [
+        Input("match_duration_slider", "value"),
+        Input("match_type_selector", "value"),
+    ],
+
+)
+def produce_individual(match_duration,match_type):
+    layout_individual = copy.deepcopy(layout)
+    data = [
+        dict (
+            type = 'bar',
+            x = hero_df['hero_name_ch'],
+            y = hero_df['win_rate'],
+            name = '英雄胜率',
+            showarrow=False
+        )
+    ]
+    layout_individual['title'] = '近期英雄胜率'
+    layout_individual["showlegend"] = False
+    layout_individual["autosize"] = True
+    layout_individual['xaxis'] = dict(
+        showticklabels = False
+    )
+    figure = dict(data = data,layout = layout_individual)
+
+    return figure
 
 
 
@@ -255,6 +337,13 @@ def produce_aggregate(match_duration,match_type):
     start = g.groupby("duration").count()
     start.columns = ['count']
     layout_aggregate["title"] = "比赛时长分布"
+
+    colors = []
+    for i in range(20, 100):
+        if i >= int(match_duration[0]) and i < int(match_duration[1]):
+            colors.append("rgb(123, 199, 255)")
+        else:
+            colors.append("rgba(123, 199, 255, 0.2)")
     data = [
 
         dict(
@@ -262,6 +351,7 @@ def produce_aggregate(match_duration,match_type):
             x=start.index,
             y=start['count'],
             name="比赛时长",
+            marker=dict(color=colors),
         )
     ]
     figure = dict(data=data, layout=layout_aggregate)
@@ -609,7 +699,7 @@ def make_pie_figure(match_duration, match_type):
             textinfo="label+percent+name",
             hole=0.5,
             marker=dict(colors=["#fac1b7", "#a9bb95"]),
-            domain={"x": [0, 0.45], "y": [0.2, 0.8]},
+            # domain={"x": [0, 0.45], "y": [0.2, 0.8]},
         )
         # dict(
         #     type="pie",
@@ -677,10 +767,11 @@ def make_count_figure(match_duration, match_type):
         #     hoverinfo="skip",
         # ),
         dict(
-            type="bar",
+            type="line",
             x=start.index,
             y=start['count'],
             name="比赛日期",
+            mode='lines',
             #marker=dict(color=colors),
         ),
     ]
