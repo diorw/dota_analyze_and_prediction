@@ -111,7 +111,8 @@ def display_page(pathname):
         return predict.predict_layout
     elif pathname == '/model':
         return model.model_layout
-
+    # else:
+    #     return 'URL not found'
 
 
 if __name__ == '__main__':
