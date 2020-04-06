@@ -42,6 +42,14 @@ def generate_placeholder(*args):
 
     return html.Div(children=model)
 
+def generate_input(*args):
+    model = []
+    A_or_B = args[0]
+    for i in range(5):
+        model.append(dcc.Input(id = str(i)+"_playerid_"+A_or_B,className="player-input hero-img"))
+
+    return html.Div(children=model)
+
 predict_layout = html.Div(
             children=html.Div(
                 className="main-section",
@@ -94,6 +102,26 @@ predict_layout = html.Div(
                                                      html.Div(className="team-container",
                                                               children=[html.Div("Team B",className="team-title team-b"),
                                                                         generate_placeholder("B"),
+                                                                        html.Div(id='hidden_B',
+                                                                                 style={"display": "none"})
+                                                              ])
+
+                                                 ]
+                                                 ),
+                                        html.Div(className="TBDUn",
+                                                 children=[
+                                                     html.Div(className="team-container",children=
+                                                        [
+                                                         generate_input("A"),
+                                                         html.Div(id = 'hidden_A',style={"display":"none"})
+                                                         ]
+
+                                                        ),
+
+                                                     html.Div("   ", className="seperator"),
+                                                     html.Div(className="team-container",
+                                                              children=[
+                                                                        generate_input("B"),
                                                                         html.Div(id='hidden_B',
                                                                                  style={"display": "none"})
                                                               ])

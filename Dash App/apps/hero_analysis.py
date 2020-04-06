@@ -1,11 +1,6 @@
-import dash
-import dash_core_components as dcc
-import dash_html_components as html
 import pandas as pd
-import numpy as np
 import plotly.graph_objects as go
-import pymysql
-match_example = ['16', '107', '93', '56', '27', '8', '26', '14', '101', '41']
+match_example = ['114', '21', '96', '54', '68', '86', '98', '76', '8', '3']
 if __name__ == "__main__":
     # conn = pymysql.connect()
     # cursor = conn.cursor()
@@ -17,20 +12,23 @@ if __name__ == "__main__":
     # df['win_rate'] = df['pro_win']/df['pro_pick']
     # df.to_csv("../assets/hero_stats.csv")
 
-    df = pd.read_csv("../assets/hero_stats.csv")
+    df = pd.read_csv("C:\\Users\\wda\\PycharmProjects\\Kitti\\dota_analyze_and_prediction\\Dash App\\data\\hero_stats.csv")
+    id_to_name_dict = {}
+    for index, items in df.iterrows():
+        id_to_name_dict[str(items[0])] = items[3]
+    df.columns = ["id",'pro_pick','pro_win','heor_name_ch','type']
+    df['win_rate']=df['pro_win']/df['pro_pick']
     y = []
     for id in match_example:
         rate = df['win_rate'][df['id'] == int(id)].values.tolist()[0]
         y.append(rate)
-    print(y)
-
     x1 = match_example[:5]
+    x1 = list(map(lambda x:id_to_name_dict[x],x1))
     y1 = y[:5]
-
     x2 = match_example[5:]
+    x2 = list(map(lambda x:id_to_name_dict[x],x2))
     y2 = y[5:]
     fig = go.Figure()
-
     fig.add_trace(go.Scatter(
         x=x1, y=y1,
         name='天辉',

@@ -52,6 +52,12 @@
     box-shadow: rgba(21, 21, 21, 0.61) 0px 0px 5px inset;
     background: rgba(18, 24, 37, 0.98);
 }
+.TBDUn .player-input{
+    display: inline-block;
+    height: 30px;
+    width: 90px;
+    background: rgba(255, 255, 255, 0.98);
+}
 .TBDUn .team-container div {
     text-align: center;
 }

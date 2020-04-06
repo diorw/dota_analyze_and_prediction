@@ -5,6 +5,7 @@ import dash
 import math
 import datetime as dt
 import pandas as pd
+import dash_table
 from dash.dependencies import Input, Output, State, ClientsideFunction
 import dash_core_components as dcc
 import dash_html_components as html
@@ -127,7 +128,7 @@ app.layout = html.Div(
             [
                 html.Div(
                     [
-                        html.P("版本", className="control_label"),
+                        # html.P("版本", className="control_label"),
                         #
                         # dcc.Dropdown(
                         #     id="well_types",
@@ -163,23 +164,24 @@ app.layout = html.Div(
                     ],
                     className="pretty_container four columns",
                     id="cross-filter-options",
+                    style = {"padding-bottom":250}
                 ),
                 html.Div(
                     [
                         html.Div(
                             [
                                 html.Div(
-                                    [html.H6("2",id="data_total"), html.P("有效数据数")],
+                                    [html.H6("30596",id="data_total"), html.P("有效数据数")],
                                     id="wells",
                                     className="mini_container",
                                 ),
                                 html.Div(
-                                    [html.H6("15",id="data_today"), html.P("今日爬取有效数据")],
+                                    [html.H6("0",id="data_today"), html.P("今日爬取有效数据")],
                                     id="gas",
                                     className="mini_container",
                                 ),
                                 html.Div(
-                                    [html.H6("13",id="data_curmonth"), html.P("本月爬取有效数据")],
+                                    [html.H6("0",id="data_curmonth"), html.P("本月爬取有效数据")],
                                     id="oil",
                                     className="mini_container",
                                 ),
@@ -269,7 +271,8 @@ def produce_main(match_duration,match_type):
             x = hero_id_list,
             y = hero_id_list,
             z = result,
-            hoverongaps=False
+            hoverongaps=False,
+            colorscale='Viridis'
         )
     ]
     layout_main['title'] = '英雄相对胜率'
@@ -390,7 +393,7 @@ def make_pie_figure(match_duration, match_type):
             # domain={"x": [0, 0.45], "y": [0.2, 0.8]},
         )
     ]
-    layout_pie["title"] = "Production Summary: {} to {}".format(
+    layout_pie["title"] = "Match duration: {} to {}".format(
         match_duration[0], match_duration[1]
     )
     layout_pie["font"] = dict(color="#777777")

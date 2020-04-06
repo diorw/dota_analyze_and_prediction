@@ -8,12 +8,12 @@ import pymysql
 import dash_cytoscape as cyto
 from PIL import Image
 import matplotlib.pyplot as plt
-df = pd.read_csv("../../dota_hero_stats.csv", header=None)
+df = pd.read_csv("C:\\Users\\wda\\PycharmProjects\\Kitti\\dota_analyze_and_prediction\\Dash App\\data\hero_stats.csv", header=None)
 id_to_name_dict = {}
 for index, items in df.iterrows():
-    id_to_name_dict[str(items[1])] = items[0][14:]
+    id_to_name_dict[str(items[0])] = items[3]
 # test
-match_example = ['16', '107', '93', '56', '27', '8', '26', '14', '101', '41']
+match_example = ['114', '21', '96', '54', '68', '86', '98', '76', '8', '3']
 
 
 def generate_elements(match_example):
@@ -29,7 +29,7 @@ def generate_elements(match_example):
             'data': {'id': 'tian_hui', 'label': '天辉'}
         },
         {
-            'data': {'id': 'ye_yan', 'label': '夜宴'}
+            'data': {'id': 'ye_yan', 'label': '夜魇'}
         }
     ]
     def query_win_rate(hero_id,target_hero_id):
@@ -37,7 +37,7 @@ def generate_elements(match_example):
         win_rate = cursor.fetchall()
         #print(win_rate)
         if(len(win_rate)>0 and len(win_rate[0])> 0 and win_rate[0][0] is not None):
-            if(win_rate[0][0]>0.6 or win_rate[0][0]<0.4):
+            if(win_rate[0][0]>0.55 or win_rate[0][0]<0.45):
                 return win_rate[0][0]
             else:
                 return None
@@ -54,7 +54,7 @@ def generate_elements(match_example):
             data = {'source': str(i), 'target': str(j),'label':query_win_rate(match_example[i],match_example[j])}
 
             if(data['label'] is not None):
-                if(data['label'] > 0.6):
+                if(data['label'] > 0.55):
                     edges = {'data': data, 'classes': 'tianhui_yeyan'}
                 else:
                     edges = {'data': data, 'classes': 'yeyan_tianhui'}
@@ -96,18 +96,18 @@ app.layout = html.Div([
             {
                 'selector':'.yeyan_tianhui',
                 'style':{
-                    'source-arrow-color': 'green',
+                    'source-arrow-color': 'red',
                     'target-arrow-shape': 'vee',
-                    'line-color': 'green',
+                    'line-color': 'red',
                     'label':'data(label)'
                 }
             },
             {
                 'selector':'.tianhui_yeyan',
                 'style':{
-                    'source-arrow-color': 'red',
+                    'source-arrow-color': 'green',
                     'target-arrow-shape': 'vee',
-                    'line-color': 'red',
+                    'line-color': 'green',
                     'label':'data(label)'
                 }
             },

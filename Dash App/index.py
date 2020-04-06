@@ -5,7 +5,7 @@ import pandas as pd
 import numpy as np
 from dash.dependencies import Input, Output, State
 from app import app
-from apps import predict
+from apps import predict,model
 app.layout = html.Div([
     dcc.Location(id='url', refresh=False),
 html.Div([
@@ -23,7 +23,7 @@ html.Div([
                                                 className="navigation_text"
                                             ),
                                             html.Div(
-                                                html.A("模型训练",href="/train"),
+                                                html.A("模型训练",href="/model"),
                                                 className="navigation_text"
                                             ),
                                             html.Div(
@@ -76,7 +76,7 @@ index_page = html.Div([
                                                 className="navigation_text"
                                             ),
                                             html.Div(
-                                                html.A("模型训练",href="/train"),
+                                                html.A("模型训练",href="/model"),
                                                 className="navigation_text"
                                             ),
                                             html.Div(
@@ -109,10 +109,9 @@ def display_page(pathname):
         return index_page
     elif pathname == '/predict':
         return predict.predict_layout
-    # elif pathname == '/app2':
-    #     return app2.layout
-    # else:
-    #     return 'URL not found'
+    elif pathname == '/model':
+        return model.model_layout
+
 
 
 if __name__ == '__main__':
