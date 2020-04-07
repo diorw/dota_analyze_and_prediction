@@ -113,7 +113,7 @@ predict_layout = html.Div(
                                                      html.Div(className="team-container",children=
                                                         [
                                                          generate_input("A"),
-                                                         html.Div(id = 'hidden_A',style={"display":"none"})
+                                                        
                                                          ]
 
                                                         ),
@@ -122,8 +122,7 @@ predict_layout = html.Div(
                                                      html.Div(className="team-container",
                                                               children=[
                                                                         generate_input("B"),
-                                                                        html.Div(id='hidden_B',
-                                                                                 style={"display": "none"})
+
                                                               ])
 
                                                  ]

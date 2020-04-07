@@ -1,11 +1,9 @@
-import dash
 import dash_core_components as dcc
 import dash_html_components as html
-import pandas as pd
-import numpy as np
 from dash.dependencies import Input, Output, State
 from app import app
 from apps import predict,model
+from apps import crawl
 app.layout = html.Div([
     dcc.Location(id='url', refresh=False),
 html.Div([
@@ -105,14 +103,17 @@ index_page = html.Div([
 # Update the index
 @app.callback(Output('page-content', 'children'), [Input('url', 'pathname')])
 def display_page(pathname):
+    print(pathname)
     if pathname == '/':
         return index_page
     elif pathname == '/predict':
         return predict.predict_layout
     elif pathname == '/model':
         return model.model_layout
-    # else:
-    #     return 'URL not found'
+    elif pathname == '/crawl':
+        return crawl.crawl_layout
+    else:
+        return 'URL not found'
 
 
 if __name__ == '__main__':

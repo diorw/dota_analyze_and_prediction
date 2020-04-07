@@ -1,42 +1,14 @@
-import pickle
 import copy
 import pathlib
-import dash
-import math
-import datetime as dt
 import pandas as pd
-import dash_table
 from dash.dependencies import Input, Output, State, ClientsideFunction
 import dash_core_components as dcc
 import dash_html_components as html
 from app import app
 from datetime import datetime
-# # Multi-dropdown options
 
-#
-# # get relative data folder
-PATH = pathlib.Path(__file__).parent
+PATH = pathlib.Path(__file__).parent.parent
 DATA_PATH = PATH.joinpath("data").resolve()
-# print(DATA_PATH)
-#
-#
-# Create controls
-# county_options = [
-#     {"label": str(COUNTIES[county]), "value": str(county)} for county in COUNTIES
-# ]
-#
-# well_status_options = [
-#     {"label": str(WELL_STATUSES[well_status]), "value": str(well_status)}
-#     for well_status in WELL_STATUSES
-# ]
-#
-# well_type_options = [
-#     {"label": str(WELL_TYPES[well_type]), "value": str(well_type)}
-#     for well_type in WELL_TYPES
-# ]
-#
-#
-# # Load data
 df = pd.read_csv(DATA_PATH.joinpath("match_new.csv"), low_memory=False,header = None)
 columns = [	"match_id" ,
 	"player_1_id",
@@ -81,25 +53,72 @@ hero_stats_df.columns = hero_stats_df_columns
 hero_stats_df['win_rate'] = hero_stats_df['pro_win']/hero_stats_df['pro_pick']
 hero_df = hero_stats_df.sort_values("win_rate",inplace=False)
 
-
-
-
-
-
 layout = dict(
     autosize=True,
     automargin=True,
     margin=dict(l=30, r=30, b=20, t=40),
     hovermode="closest",
-    plot_bgcolor="#F9F9F9",
-    paper_bgcolor="#F9F9F9",
+    # plot_bgcolor="#F9F9F9",
+    # paper_bgcolor="#F9F9F9",
     legend=dict(font=dict(size=10), orientation="h"),
     title="Satellite Overview",
 
 )
 
+def produce_individual():
+    layout_individual = copy.deepcopy(layout)
+    data = [
+        dict (
+            type = 'bar',
+            x = hero_df['hero_name_ch'],
+            y = hero_df['win_rate'],
+            name = '英雄胜率',
+            showarrow=False
+        )
+    ]
+    layout_individual['title'] = '近期英雄胜率'
+    layout_individual["showlegend"] = False
+    layout_individual["autosize"] = True
+    layout_individual['xaxis'] = dict(
+        showticklabels = False
+    )
+    figure = dict(data = data,layout = layout_individual)
+
+    return figure
+
+def produce_main():
+    result = []
+    for i in hero_id_list:
+        z = []
+        for j in hero_id_list:
+            if (i == j):
+                z.append(None)
+            else:
+                win_rate = relation_df[(relation_df['hero_id'] == i) & (relation_df['target_hero_id'] == j)][
+                    'win_rate'].values.tolist()
+
+                if (win_rate != []):
+                    z.append(win_rate[0])
+                else:
+                    z.append(None)
+        result.append(z)
+    layout_main = copy.deepcopy(layout)
+    data = [
+        dict (
+            type = 'heatmap',
+            x = hero_id_list,
+            y = hero_id_list,
+            z = result,
+            hoverongaps=False,
+            colorscale='Viridis'
+        )
+    ]
+    layout_main['title'] = '英雄相对胜率'
+    figure = dict(data = data,layout = layout_main)
+    return figure
+
 # Create app layout
-app.layout = html.Div(
+crawl_layout = html.Div(
     [
         # empty Div to trigger javascript file for graph resizing
         html.Div(
@@ -128,15 +147,6 @@ app.layout = html.Div(
             [
                 html.Div(
                     [
-                        # html.P("版本", className="control_label"),
-                        #
-                        # dcc.Dropdown(
-                        #     id="well_types",
-                        #     options=well_type_options,
-                        #     multi=True,
-                        #     value=list(WELL_TYPES.keys()),
-                        #     className="dcc_control",
-                        # ),
                         html.P(
                             "比赛时间范围",
                             className="control_label",
@@ -210,12 +220,12 @@ app.layout = html.Div(
         html.Div(
             [
                 html.Div(
-                    [dcc.Graph(id="main_graph")],
+                    [dcc.Graph(id="main_graph",figure = produce_main())],
                     className="pretty_container five columns",
                 )
                 ,
                 html.Div(
-                    [dcc.Graph(id="individual_graph")],
+                    [dcc.Graph(id="individual_graph",figure = produce_individual())],
                     className="pretty_container seven columns",
                 ),
             ],
@@ -239,75 +249,6 @@ app.layout = html.Div(
     id="mainContainer",
     style={"display": "flex", "flex-direction": "column"},
 )
-
-@app.callback(
-    Output("main_graph", "figure"),
-    [
-        Input("match_duration_slider", "value"),
-        Input("match_type_selector", "value"),
-    ],
-
-)
-def produce_main(match_duration,match_type):
-    result = []
-    for i in hero_id_list:
-        z = []
-        for j in hero_id_list:
-            if (i == j):
-                z.append(None)
-            else:
-                win_rate = relation_df[(relation_df['hero_id'] == i) & (relation_df['target_hero_id'] == j)][
-                    'win_rate'].values.tolist()
-
-                if (win_rate != []):
-                    z.append(win_rate[0])
-                else:
-                    z.append(None)
-        result.append(z)
-    layout_main = copy.deepcopy(layout)
-    data = [
-        dict (
-            type = 'heatmap',
-            x = hero_id_list,
-            y = hero_id_list,
-            z = result,
-            hoverongaps=False,
-            colorscale='Viridis'
-        )
-    ]
-    layout_main['title'] = '英雄相对胜率'
-    figure = dict(data = data,layout = layout_main)
-    return figure
-
-@app.callback(
-    Output("individual_graph", "figure"),
-    [
-        Input("match_duration_slider", "value"),
-        Input("match_type_selector", "value"),
-    ],
-
-)
-def produce_individual(match_duration,match_type):
-    layout_individual = copy.deepcopy(layout)
-    data = [
-        dict (
-            type = 'bar',
-            x = hero_df['hero_name_ch'],
-            y = hero_df['win_rate'],
-            name = '英雄胜率',
-            showarrow=False
-        )
-    ]
-    layout_individual['title'] = '近期英雄胜率'
-    layout_individual["showlegend"] = False
-    layout_individual["autosize"] = True
-    layout_individual['xaxis'] = dict(
-        showticklabels = False
-    )
-    figure = dict(data = data,layout = layout_individual)
-
-    return figure
-
 
 
 # 比赛时长 、 比赛类型
@@ -431,15 +372,6 @@ def make_count_figure(match_duration, match_type):
 
 
     data = [
-        # dict(
-        #     type="scatter",
-        #     mode="markers",
-        #     x=g.index,
-        #     y=g["API_WellNo"],
-        #     name="All Wells",
-        #     opacity=0,
-        #     hoverinfo="skip",
-        # ),
         dict(
             type="line",
             x=start.index,
@@ -461,5 +393,5 @@ def make_count_figure(match_duration, match_type):
 
 
 # Main
-if __name__ == "__main__":
-    app.run_server(debug=True)
+# if __name__ == "__main__":
+#     app.run_server(debug=True)
