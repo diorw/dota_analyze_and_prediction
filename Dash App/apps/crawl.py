@@ -206,9 +206,10 @@ crawl_layout = html.Div(
                         ),
                         # 每日数据量
                         html.Div(
-                            [dcc.Graph(id="count_graph")],
-                            id="countGraphContainer",
-                            className="pretty_container",
+                            
+                            [ dcc.Loading(id = 'count_graph_loading',type = 'default')
+                            ],
+                            className="pretty_container seven columns"
                         ),
                     ],
                     id="right-column",
@@ -239,8 +240,9 @@ crawl_layout = html.Div(
                 )
                 ,
                 html.Div(
-                    [dcc.Graph(id="aggregate_graph")],
-                    className="pretty_container seven columns",
+                    [dcc.Loading(id = 'aggregate_graph_loading',type = 'circle')],
+                    className="pretty_container seven columns"
+
                 ),
             ],
             className="row flex-display",
@@ -264,7 +266,7 @@ def filter_dataframe(df, match_duration, match_type):
     return dff_result
 
 @app.callback(
-    Output("aggregate_graph", "figure"),
+    Output("aggregate_graph_loading", "children"),
     [
         Input("match_duration_slider", "value"),
         Input("match_type_selector", "value"),
@@ -299,7 +301,7 @@ def produce_aggregate(match_duration,match_type):
         )
     ]
     figure = dict(data=data, layout=layout_aggregate)
-    return figure
+    return dcc.Graph(id = 'aggregate_graph',figure=figure)
 
 # Selectors, main graph -> pie graph
 @app.callback(
@@ -354,7 +356,7 @@ def format_starttime(start_time):
 
 # Selectors -> count graph
 @app.callback(
-    Output("count_graph", "figure"),
+    Output("count_graph_loading", "children"),
     [
         Input("match_duration_slider", "value"),
         Input("match_type_selector", "value"),
@@ -389,7 +391,7 @@ def make_count_figure(match_duration, match_type):
     layout_count["autosize"] = True
 
     figure = dict(data=data, layout=layout_count)
-    return figure
+    return dcc.Graph(id = 'count_graph',figure=figure)
 
 
 # Main

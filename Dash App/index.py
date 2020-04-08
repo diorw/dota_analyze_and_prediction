@@ -103,7 +103,6 @@ index_page = html.Div([
 # Update the index
 @app.callback(Output('page-content', 'children'), [Input('url', 'pathname')])
 def display_page(pathname):
-    print(pathname)
     if pathname == '/':
         return index_page
     elif pathname == '/predict':

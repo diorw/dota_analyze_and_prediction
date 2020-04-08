@@ -61,7 +61,7 @@ id_to_name_dict['128'] = '蜥蜴绝手'
 for i in match_log.columns:
     if(i.startswith("hero")):
         match_log[i] = match_log[i].apply(lambda x:id_to_name_dict[str(int(x))])
-print(match_log)
+
 
 
 def get_match_data():
