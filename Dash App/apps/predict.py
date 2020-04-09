@@ -2,8 +2,13 @@ import os
 import dash_core_components as dcc
 import dash_html_components as html
 from app import app
-from dash.dependencies import Input, Output
+from dash.dependencies import Input, Output,State
+import numpy as np
+import keras
+from keras.models import load_model
 
+hero_id_max = 129
+model_saved_path = "C:\\Users\\wda\\PycharmProjects\\Kitti\\dota_analyze_and_prediction\\Dash App\\data\\568213_2020_03_07_LSTM.h5"
 def generate_select(hero_name = None):
     files = os.listdir("assets/hero_icon")
     model = []
@@ -93,7 +98,7 @@ predict_layout = html.Div(
                                                      html.Div(className="team-container",children=
                                                         [html.Div("Team A",className="team-title team-a"),
                                                          generate_placeholder("A"),
-                                                         html.Div(id = 'hidden_A',style={"display":"none"})
+                                                         dcc.Input(id = 'hidden_A',type='text')
                                                          ]
 
                                                         ),
@@ -102,8 +107,8 @@ predict_layout = html.Div(
                                                      html.Div(className="team-container",
                                                               children=[html.Div("Team B",className="team-title team-b"),
                                                                         generate_placeholder("B"),
-                                                                        html.Div(id='hidden_B',
-                                                                                 style={"display": "none"})
+                                                                        dcc.Input(id='hidden_B',type='text'
+                                                                                 )
                                                               ])
 
                                                  ]
@@ -113,7 +118,7 @@ predict_layout = html.Div(
                                                      html.Div(className="team-container",children=
                                                         [
                                                          generate_input("A"),
-                                                        
+
                                                          ]
 
                                                         ),
@@ -141,7 +146,12 @@ predict_layout = html.Div(
                                                         )
                                                     ),
                                             className = "submit_section"
-                                        )
+                                        ),
+                                            html.Div(className="TBDUn",
+                                                 children=[
+                                                     html.Div(children="20%",id = 'win_rate', className="seperator"),
+                                                 ]
+                                                 ),
 
                                         ]
                             )
@@ -160,6 +170,33 @@ predict_layout = html.Div(
 )
 def update_output_div(input_value):
     return generate_select(input_value)
+
+@app.callback(
+    Output(component_id="win_rate",component_property="children"),
+    [Input(component_id="submit_query", component_property='n_clicks'),
+     Input(component_id='hidden_A', component_property='value'),
+     Input(component_id='hidden_B', component_property='value')]
+
+)
+def inference(n_clicks,radiant,dire):
+    sample_in = []
+    radiant_list = list(map(int, radiant.split(',')))
+    dire_list = list(map(int, dire.split(',')))
+    radiant_vector = np.zeros(hero_id_max)
+    dire_vector = np.zeros(hero_id_max)
+    print(radiant_list)
+    print(dire_list)
+    for item in radiant_list:
+        radiant_vector[int(item) - 1] = 1
+    for item in dire_list:
+        dire_vector[int(item) - 1] = 1
+
+    sample_in.append([radiant_vector, dire_vector])
+    sample_in = np.array(sample_in).reshape(len(sample_in),2,hero_id_max)
+    keras.backend.clear_session()    # 计算图清空，防止越来越慢
+    model = load_model(model_saved_path)
+    out0 = model.predict(sample_in)
+    return "预测天辉方胜率为 "+str(round(out0[0][0]*100,2))+"%"
 
 
 

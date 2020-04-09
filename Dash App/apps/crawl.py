@@ -209,7 +209,9 @@ crawl_layout = html.Div(
                             
                             [ dcc.Loading(id = 'count_graph_loading',type = 'default')
                             ],
-                            className="pretty_container seven columns"
+                            id="countGraphContainer",
+                            className="pretty_container"
+
                         ),
                     ],
                     id="right-column",
