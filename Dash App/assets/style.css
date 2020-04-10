@@ -64,6 +64,18 @@
   width: calc(100% - 30px);
 }
 
+#hero_win_rate_graph {
+  position: absolute;
+  height: calc(100% - 30px);
+  width: calc(100% - 30px);
+}
+
+#player_win_rate_graph {
+  position: absolute;
+  height: calc(100% - 30px);
+  width: calc(100% - 30px);
+}
+
 #countGraphContainer {
   flex: 5;
   position: relative;
