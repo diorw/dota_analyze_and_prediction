@@ -10,7 +10,7 @@ import dash
 import pandas as pd
 import copy
 import pymysql
-import plotly.graph_objects as go
+import dash_cytoscape as cyto
 import requests
 headers = {'Accept': 'text/html, application/xhtml+xml, image/jxr, */*',
            'Accept - Encoding': 'gzip, deflate',
@@ -25,7 +25,8 @@ hero_stats_df = pd.read_csv("C:\\Users\\wda\\PycharmProjects\\Kitti\\dota_analyz
 hero_stats_df.columns = ["id", 'pro_pick', 'pro_win', 'heor_name_ch', 'type']
 hero_stats_df['win_rate'] = hero_stats_df['pro_win'] / hero_stats_df['pro_pick']
 conn = pymysql.connect(host='120.55.167.182', user='root', password='wda20190707', port=3306, database='dota')
-
+player_id_list = ['152461420', '205144888', '143182355', '89115202', '140973920', '255319952', '129365110', '260241404',
+                  '207212099', '187938206']
 
 
 id_to_name_dict = {}
@@ -38,7 +39,7 @@ layout = dict(
     hovermode="closest",
     # plot_bgcolor="#F9F9F9",
     # paper_bgcolor="#F9F9F9",
-    legend=dict(font=dict(size=10), orientation="h"),
+    legend=dict(font=dict(size=8), orientation="h"),
     title="Satellite Overview",
 
 )
@@ -86,7 +87,11 @@ def generate_input(*args):
     model = []
     A_or_B = args[0]
     for i in range(5):
-        model.append(dcc.Input(id = str(i)+"_playerid_"+A_or_B,className="player-input hero-img"))
+        if(A_or_B == "A"):
+            model.append(dcc.Input(id = str(i)+"_playerid_"+A_or_B,className="player-input hero-img",value = player_id_list[i]))
+        else:
+            model.append(dcc.Input(id=str(i) + "_playerid_" + A_or_B, className="player-input hero-img",value=player_id_list[i+5])
+                         )
 
     return html.Div(children=model)
 
@@ -190,7 +195,7 @@ predict_layout = html.Div(
                                             html.Div(
                                                 [
                                                     html.Div(
-                                                        [dcc.Graph(id="dimension_graph")],
+                                                        [dcc.Graph(id = 'hero_relationship_graph')],
                                                         className="pretty_container five columns",
                                                     )
                                                     ,
@@ -377,5 +382,108 @@ def make_player_hero_figure(n_clicks,radiant,dire,*args):
         return figure
     except:
         raise dash.exceptions.PreventUpdate
+
+@app.callback(
+    Output(component_id="hero_relationship_graph",component_property="figure"),
+    [Input(component_id="submit_query", component_property='n_clicks')],
+    [State(component_id='hidden_A', component_property='value'),
+     State(component_id='hidden_B', component_property='value'),
+     ]
+
+)
+def make_hero_relationship_figure(n_clicks,radiant,dire):
+    relationship_layout = copy.deepcopy(layout)
+    radiant_list = radiant.split(',')
+    dire_list = dire.split(',')
+    conn = pymysql.connect(host='120.55.167.182', user='root', password='wda20190707', port=3306, database='dota')
+    conn.ping()
+    cursor = conn.cursor()
+    max_update_ymd_sql = 'select max(update_ymd) from hero_relationship'
+    cursor.execute(max_update_ymd_sql)
+    max_update_ymd_list = cursor.fetchall()
+    max_update_ymd = max_update_ymd_list[0]
+    query = "select win_rate from hero_relationship where update_ymd = %s and hero_id = %s and target_hero_id = %s and match_count > 10"
+
+    def query_win_rate(hero_id, target_hero_id):
+        cursor.execute(query, (max_update_ymd, hero_id, target_hero_id))
+        win_rate = cursor.fetchall()
+        # print(win_rate)
+        if (len(win_rate) > 0 and len(win_rate[0]) > 0 and win_rate[0][0] is not None):
+            return win_rate[0][0]
+            # if (win_rate[0][0] > 0.55 or win_rate[0][0] < 0.45):
+            #     return win_rate[0][0]
+            # else:
+            #     return None
+        else:
+            return 0
+    z = []
+    x = list(map(lambda x:id_to_name_dict[x],radiant_list))
+    y = list(map(lambda x:id_to_name_dict[x],dire_list))
+    for i in range(5):
+        tmp_z = []
+        for j in range(5):
+            tmp_z.append(query_win_rate(radiant_list[i], dire_list[j]))
+        z.append(tmp_z)
+    print(z)
+    data = [
+        dict(
+            type = 'heatmap',
+            x = x,
+            y = y,
+            z = z,
+            colorscale='Viridis'
+        )
+    ]
+    relationship_layout['title']='英雄相对胜率'
+    figure = dict(data = data,layout = relationship_layout)
+    return figure
+
+
+@app.callback(
+    Output(component_id="radar_graph",component_property="figure"),
+    [Input(component_id="submit_query", component_property='n_clicks')],
+    [State(component_id='hidden_A', component_property='value'),
+     State(component_id='hidden_B', component_property='value'),
+     ]
+
+)
+def make_dimension_graph(n_clicks,radiant,dire):
+    radiant_list = radiant.split(',')
+    dire_list = dire.split(',')
+    dimension_graph_layout = copy.deepcopy(layout)
+    categories  = ["控制","核心", "辅助", "逃生", "爆发", "先手", "耐久","推进"]
+    conn = pymysql.connect(host='120.55.167.182', user='root', password='wda20190707', port=3306, database='dota')
+    cursor = conn.cursor()
+    cursor.execute("select sum(kong_zhi),sum(he_xin),sum(fu_zhu),sum(tao_sheng),sum(bao_fa),sum(xian_shou),sum(nai_jiu),sum(tui_jin) from dota.hero_stats "
+                   +" where id = %s or id = %s or id = %s or id = %s or id = %s",(radiant_list[0],radiant_list[1],radiant_list[2],radiant_list[3],radiant_list[4]))
+    radiant_dimension = list(cursor.fetchall()[0])
+    print(radiant_dimension)
+    cursor.execute("select sum(kong_zhi),sum(he_xin),sum(fu_zhu),sum(tao_sheng),sum(bao_fa),sum(xian_shou),sum(nai_jiu),sum(tui_jin) from dota.hero_stats "
+                   +" where id = %s or id = %s or id = %s or id = %s or id = %s",(dire_list[0],dire_list[1],dire_list[2],dire_list[3],dire_list[4]))
+    dire_dimension = list(cursor.fetchall()[0])
+    print(dire_dimension)
+    data = [
+        dict(
+            type = 'scatterpolar',
+            r=radiant_dimension,
+            theta=categories,
+            fill='toself',
+            name='天辉'
+        ),
+        dict(
+            type='scatterpolar',
+            r=dire_dimension,
+            theta=categories,
+            fill='toself',
+            name='夜魇'
+        )
+    ]
+    dimension_graph_layout['title'] = '阵容能力维度分析'
+    return dict(data = data,layout = dimension_graph_layout)
+
+
+
+
+
 if __name__ == "__main__":
     app.run_server(debug=False)
