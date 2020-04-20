@@ -12,6 +12,9 @@ import copy
 import pymysql
 import dash_cytoscape as cyto
 import requests
+import plotly.graph_objects as go
+
+keras.backend.clear_session()  # 计算图清空，防止越来越慢
 headers = {'Accept': 'text/html, application/xhtml+xml, image/jxr, */*',
            'Accept - Encoding': 'gzip, deflate',
            'Accept-Language': 'zh-Hans-CN, zh-Hans; q=0.5',
@@ -24,14 +27,25 @@ model_saved_path = "C:\\Users\\wda\\PycharmProjects\\Kitti\\dota_analyze_and_pre
 hero_stats_df = pd.read_csv("C:\\Users\\wda\\PycharmProjects\\Kitti\\dota_analyze_and_prediction\\Dash App\\data\\hero_stats.csv")
 hero_stats_df.columns = ["id", 'pro_pick', 'pro_win', 'heor_name_ch', 'type']
 hero_stats_df['win_rate'] = hero_stats_df['pro_win'] / hero_stats_df['pro_pick']
+id_to_name_dict = {}
+for index, items in hero_stats_df.iterrows():
+    id_to_name_dict[str(items[0])] = items[3]
+
 conn = pymysql.connect(host='120.55.167.182', user='root', password='wda20190707', port=3306, database='dota')
 player_id_list = ['152461420', '205144888', '143182355', '89115202', '140973920', '255319952', '129365110', '260241404',
                   '207212099', '187938206']
 
 
-id_to_name_dict = {}
-for index, items in hero_stats_df.iterrows():
-    id_to_name_dict[str(items[0])] = items[3]
+
+hero_stats_en_df = pd.read_csv("C:\\Users\\wda\\PycharmProjects\\Kitti\\dota_analyze_and_prediction\\Dash App\\data\\hero_stats_en.csv",header = None)
+Enname_to_id_dict = {}
+id_to_Enname = {}
+for index, items in hero_stats_en_df.iterrows():
+    Enname_to_id_dict[str(items[0])] = items[1]
+    id_to_Enname[str(items[1])] = items[0]
+print(Enname_to_id_dict)
+
+
 layout = dict(
     autosize=True,
     automargin=True,
@@ -39,7 +53,7 @@ layout = dict(
     hovermode="closest",
     # plot_bgcolor="#F9F9F9",
     # paper_bgcolor="#F9F9F9",
-    legend=dict(font=dict(size=8), orientation="h"),
+    # legend=dict(font=dict(size=8), orientation="h"),
     title="Satellite Overview",
 
 )
@@ -56,18 +70,15 @@ def generate_select(hero_name = None):
                               children = [
                                   html.Div(className="name-overlay",
                                            children=[
-                                               html.Div(str(file).rstrip("_full.png"),className="name"),
+                                               html.Div(str(file).split("_full.png")[0],className="name"),
                                                html.Div("A",className="team-indicator team-a"),
                                                html.Div("B",className="team-indicator team-b")
-
-
-
                                            ]),
                                   html.Img(src=imgsrc),
                                   html.Div(className="ts-container ",
                                            children=[
-                                            html.Div("Add To Team A",id = str(file).rstrip("_full.png")+"_A",className="ts ts-left",role="button",tabIndex="0"),
-                                            html.Div("Add To Team B",id = str(file).rstrip("_full.png")+"_B", className="ts ts-right", role="button",
+                                            html.Div("Add To Team A",id = str(file).split("_full.png")[0]+"_A",className="ts ts-left",role="button",tabIndex="0"),
+                                            html.Div("Add To Team B",id = str(file).split("_full.png")[0]+"_B", className="ts ts-right", role="button",
                                                         tabIndex="0")
                                            ])
                               ]
@@ -75,13 +86,17 @@ def generate_select(hero_name = None):
         model.append(hero_block)
     return model
 
+
+
+
+
 def generate_placeholder(*args):
     model = []
     A_or_B = args[0]
     for i in range(5):
-        model.append(html.Img(id = str(i)+"_"+A_or_B,className="hero-placeholder hero-img"))
+        model.append(html.Img(id = str(i)+"_"+A_or_B,className="hero-placeholder hero-img",role="button"))
 
-    return html.Div(children=model)
+    return html.Div(children=model,id = A_or_B+"_placeholder")
 
 def generate_input(*args):
     model = []
@@ -101,8 +116,8 @@ predict_layout = html.Div(
                     children = html.Div(className="fWisXZ",
                             children= html.Div(className="dnZKxn",
                                         children=[html.Div(
-                                            [html.Span("Hero Combos",className="title"),
-                                            html.Span("Search for hero combinations in public and professional matches",className="subtitle")]
+                                            [html.Span("英雄阵容组合",className="title"),
+                                            html.Span("选取特定的英雄阵容，分析双方阵容优劣，并预测胜率",className="subtitle")]
                                             ,className="clNgdz"
                                         ),
                                         html.Div(
@@ -138,7 +153,8 @@ predict_layout = html.Div(
                                                      html.Div(className="team-container",children=
                                                         [html.Div("Team A",className="team-title team-a"),
                                                          generate_placeholder("A"),
-                                                         dcc.Input(id = 'hidden_A',type='text',style={"display":"none"},value = "114,21,96,54,68")
+                                                         dcc.Input(id = 'hidden_A',type='text',style={"display":"none"},value = "21,96,54,68,4")
+                                                            # value = "114,21,96,54,68"
                                                          ]
 
                                                         ),
@@ -259,7 +275,6 @@ def inference(n_clicks,radiant,dire):
 
         sample_in.append([radiant_vector, dire_vector])
         sample_in = np.array(sample_in).reshape(len(sample_in),2,hero_id_max)
-        keras.backend.clear_session()    # 计算图清空，防止越来越慢
         model = load_model(model_saved_path)
         out0 = model.predict(sample_in)
         return "预测天辉方胜率为 "+str(round(out0[0][0]*100,2))+"%"
@@ -291,27 +306,11 @@ def make_hero_win_rate_figure(n_clicks,radiant,dire):
         y1 = y[:5]
         x2 = list(map(lambda x: id_to_name_dict[str(x)], dire_list))
         y2 = y[5:]
-        hero_win_rate_layout['title'] = '英雄胜率'
-        data = [
-        dict(
-            type = "scatter",
-            x = x1,
-            y = y1,
-            name = '天辉',
-            mode = 'markers',
-            marker_color = 'rgba(152,0,0,.8)'
-        ),
-        dict(
-            type = "scatter",
-            x = x2,
-            y = y2,
-            name = '夜魇',
-            mode='markers',
-            marker_color='rgba(152, 0, 0, .8)'
-        )
-        ]
-        figure = dict(data = data,layout = hero_win_rate_layout)
-        return figure
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=x1,y=y1,name = '天辉',mode = 'markers',marker_color = 'rgba(152,0,0,.8)'))
+        fig.add_trace(go.Scatter(x=x2,y=y2,name = '夜魇',mode = 'markers',marker_color = 'rgba(52,0, 0,.8)'))
+        fig.update_layout(xaxis_title="英雄名称",yaxis_title='英雄全局胜率',title = '双方英雄全局胜率对比')
+        return fig
     except:
         raise dash.exceptions.PreventUpdate
 
@@ -328,8 +327,6 @@ State_B = [State(component_id=str(i)+"_playerid_"+"B", component_property='value
 )
 def make_player_hero_figure(n_clicks,radiant,dire,*args):
     try:
-
-        player_hero_layout = copy.deepcopy(layout)
         match_count = []
         win = []
         radiant_list = list(map(int, radiant.split(',')))
@@ -353,6 +350,7 @@ def make_player_hero_figure(n_clicks,radiant,dire,*args):
                 win.append(result[1])
             else:
                 re = requests.get("https://api.opendota.com/api/players/"+player_id+"/heroes?hero_id="+str(hero_id),headers = headers)
+                print("https://api.opendota.com/api/players/"+player_id+"/heroes?hero_id="+str(hero_id))
                 if(re.status_code==200):
                     json = re.json()[0]
                     win_counts = json['win']
@@ -360,28 +358,62 @@ def make_player_hero_figure(n_clicks,radiant,dire,*args):
                     win.append(win_counts)
                     match_count.append(games)
         x = list(map(lambda x: id_to_name_dict[str(x)], radiant_list+dire_list))
-
-        data = [
-            dict(
-                type = 'bar',
-                name = '使用场次',
-                x = x,
-                y = match_count,
-                mode = 'stack'
-            ),
-            dict(
-                type = 'bar',
-                name = '胜利场次',
-                x = x,
-                y = win,
-                mode = 'stack'
-            )
-        ]
-        player_hero_layout['title']='玩家英雄使用分析'
-        figure = dict(data = data,layout = player_hero_layout)
-        return figure
+        fig = go.Figure()
+        fig.add_trace(go.Bar(x = x,y = match_count,name = '使用场次'))
+        fig.add_trace(go.Bar(x = x,y = win,name = '胜利场次'))
+        fig.update_layout(xaxis_title="英雄名称",yaxis_title='玩家使用场次及胜利场次',title = '双方玩家英雄胜率对比')
+        return fig
     except:
         raise dash.exceptions.PreventUpdate
+
+A_Input = [Input(component_id =str(file).split("_full.png")[0]+"_A",component_property='n_clicks') for file in os.listdir("assets/hero_icon")]
+B_Input = [Input(component_id =str(file).split("_full.png")[0]+"_B",component_property='n_clicks') for file in os.listdir("assets/hero_icon")]
+
+@app.callback(
+    Output(component_id="A_placeholder",component_property="children"),
+    A_Input,
+    [State(component_id='hidden_A', component_property='value'),
+     State(component_id='hidden_B', component_property='value'),
+     ]
+)
+def test(*args):
+    ctx = dash.callback_context
+    if not ctx.triggered:
+        raise dash.exceptions.PreventUpdate
+    if(args[-2] is None):
+        radiant_list = []
+    else:
+        radiant_list = list(map(int, args[-2].split(',')))
+    if (args[-1] is None):
+        dire_list = []
+    else:
+
+        dire_list = list(map(int, args[-1].split(',')))
+    print(dire_list)
+    print(radiant_list)
+
+    btn_id = int(Enname_to_id_dict[str(ctx.triggered[0]['prop_id'].split('.')[0]).split("_A")[0]])
+    # 如果该英雄已经选择了，不更新
+    if(btn_id in radiant_list or btn_id in dire_list):
+        raise dash.exceptions.PreventUpdate
+    elif len(radiant_list)==5:
+        raise dash.exceptions.PreventUpdate
+    else:
+        radiant_list.append(btn_id)
+
+    figure = []
+    for i in range(len(radiant_list)):
+        figure.append(html.Img(id=str(i) + "_A",src = 'assets/hero_icon/'+id_to_Enname[str(radiant_list[i])]+"_full.png", className="hero-placeholder hero-img"))
+    for i in range(len(radiant_list),5):
+        figure.append(
+            html.Img(id=str(i) + "_A",
+                     className="hero-placeholder hero-img"))
+
+    return figure
+
+
+
+
 
 @app.callback(
     Output(component_id="hero_relationship_graph",component_property="figure"),
@@ -392,7 +424,6 @@ def make_player_hero_figure(n_clicks,radiant,dire,*args):
 
 )
 def make_hero_relationship_figure(n_clicks,radiant,dire):
-    relationship_layout = copy.deepcopy(layout)
     radiant_list = radiant.split(',')
     dire_list = dire.split(',')
     conn = pymysql.connect(host='120.55.167.182', user='root', password='wda20190707', port=3306, database='dota')
@@ -424,20 +455,10 @@ def make_hero_relationship_figure(n_clicks,radiant,dire):
         for j in range(5):
             tmp_z.append(query_win_rate(radiant_list[i], dire_list[j]))
         z.append(tmp_z)
-    print(z)
-    data = [
-        dict(
-            type = 'heatmap',
-            x = x,
-            y = y,
-            z = z,
-            colorscale='Viridis'
-        )
-    ]
-    relationship_layout['title']='英雄相对胜率'
-    figure = dict(data = data,layout = relationship_layout)
-    return figure
-
+    fig = go.Figure()
+    fig.add_trace(go.Heatmap(x=x,y=y,z=z,colorscale='Viridis'))
+    fig.update_layout(title='英雄相对胜率',xaxis_title = '天辉方英雄名称',yaxis_title='夜魇方英雄名称')
+    return fig
 
 @app.callback(
     Output(component_id="radar_graph",component_property="figure"),

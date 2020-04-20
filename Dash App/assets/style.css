@@ -113,25 +113,17 @@
   flex-direction: column;
 }
 
-#wells {
-  flex: 1;
-}
-
-#gas {
-  flex: 1;
-}
-
 #aggregate_data {
   align-items: center;
 }
 
-#oil {
+#oil,#water,#gas,#wells {
+  flex: 1;
+}
+#wins,#losses,#rating,#rank {
   flex: 1;
 }
 
-#water {
-  flex: 1;
-}
 
 #tripleContainer {
   display: flex;

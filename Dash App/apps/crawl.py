@@ -6,7 +6,7 @@ import dash_core_components as dcc
 import dash_html_components as html
 from app import app
 from datetime import datetime
-
+import plotly.graph_objects as go
 PATH = pathlib.Path(__file__).parent.parent
 DATA_PATH = PATH.joinpath("data").resolve()
 df = pd.read_csv(DATA_PATH.joinpath("match_new.csv"), low_memory=False,header = None)
@@ -103,19 +103,10 @@ def produce_main():
                     z.append(None)
         result.append(z)
     layout_main = copy.deepcopy(layout)
-    data = [
-        dict (
-            type = 'heatmap',
-            x = hero_id_list,
-            y = hero_id_list,
-            z = result,
-            hoverongaps=False,
-            colorscale='Viridis'
-        )
-    ]
-    layout_main['title'] = '英雄相对胜率'
-    figure = dict(data = data,layout = layout_main)
-    return figure
+    fig = go.Figure()
+    fig.add_trace(go.Heatmap(x=hero_id_list,y = hero_id_list,z = result,colorscale='Viridis'))
+    fig.update_layout(title = '英雄相对胜率热力图',xaxis_title = '英雄ID',yaxis_title='英雄ID')
+    return fig
 
 # Create app layout
 crawl_layout = html.Div(
