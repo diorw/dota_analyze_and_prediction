@@ -24,13 +24,13 @@ headers = {'Accept': 'text/html, application/xhtml+xml, image/jxr, */*',
 hero_id_max = 129
 model_saved_path = "C:\\Users\\wda\\PycharmProjects\\Kitti\\dota_analyze_and_prediction\\Dash App\\data\\568213_2020_03_07_LSTM.h5"
 
-hero_stats_df = pd.read_csv("C:\\Users\\wda\\PycharmProjects\\Kitti\\dota_analyze_and_prediction\\Dash App\\data\\hero_stats.csv")
+hero_stats_df = pd.read_csv("C:\\Users\\wda\\PycharmProjects\\Kitti\\dota_analyze_and_prediction\\Dash App\\data\\hero_stats.csv",header = None)
 hero_stats_df.columns = ["id", 'pro_pick', 'pro_win', 'heor_name_ch', 'type']
 hero_stats_df['win_rate'] = hero_stats_df['pro_win'] / hero_stats_df['pro_pick']
 id_to_name_dict = {}
 for index, items in hero_stats_df.iterrows():
     id_to_name_dict[str(items[0])] = items[3]
-
+print(id_to_name_dict)
 conn = pymysql.connect(host='120.55.167.182', user='root', password='wda20190707', port=3306, database='dota')
 player_id_list = ['152461420', '205144888', '143182355', '89115202', '140973920', '255319952', '129365110', '260241404',
                   '207212099', '187938206']
@@ -43,7 +43,7 @@ id_to_Enname = {}
 for index, items in hero_stats_en_df.iterrows():
     Enname_to_id_dict[str(items[0])] = items[1]
     id_to_Enname[str(items[1])] = items[0]
-print(Enname_to_id_dict)
+
 
 
 layout = dict(
@@ -153,7 +153,7 @@ predict_layout = html.Div(
                                                      html.Div(className="team-container",children=
                                                         [html.Div("Team A",className="team-title team-a"),
                                                          generate_placeholder("A"),
-                                                         dcc.Input(id = 'hidden_A',type='text',style={"display":"none"},value = "21,96,54,68,4")
+                                                         dcc.Input(id = 'hidden_A',type='text',style={"display":"none"},value = "0,0,0,0,0")
                                                             # value = "114,21,96,54,68"
                                                          ]
 
@@ -163,7 +163,7 @@ predict_layout = html.Div(
                                                      html.Div(className="team-container",
                                                               children=[html.Div("Team B",className="team-title team-b"),
                                                                         generate_placeholder("B"),
-                                                                        dcc.Input(id='hidden_B',type='text',style={"display":"none"},value = "86,98,76,8,3"
+                                                                        dcc.Input(id='hidden_B',type='text',style={"display":"none"},value = "0,0,0,0,0"
                                                                                  )
                                                               ])
 
@@ -291,7 +291,7 @@ def inference(n_clicks,radiant,dire):
 )
 def make_hero_win_rate_figure(n_clicks,radiant,dire):
     try:
-        hero_win_rate_layout = copy.deepcopy(layout)
+
         radiant_list = list(map(int, radiant.split(',')))
         dire_list = list(map(int, dire.split(',')))
         y = []
@@ -345,12 +345,11 @@ def make_player_hero_figure(n_clicks,radiant,dire,*args):
             cursor.execute("select games,games_win from player_hero where account_id = %s and hero_id = %s",(player_id,hero_id))
             result = cursor.fetchone()
             if(result!=None and len(result)>0):
-                print(result)
                 match_count.append(result[0])
                 win.append(result[1])
             else:
                 re = requests.get("https://api.opendota.com/api/players/"+player_id+"/heroes?hero_id="+str(hero_id),headers = headers)
-                print("https://api.opendota.com/api/players/"+player_id+"/heroes?hero_id="+str(hero_id))
+              #  print("https://api.opendota.com/api/players/"+player_id+"/heroes?hero_id="+str(hero_id))
                 if(re.status_code==200):
                     json = re.json()[0]
                     win_counts = json['win']
@@ -376,7 +375,7 @@ B_Input = [Input(component_id =str(file).split("_full.png")[0]+"_B",component_pr
      State(component_id='hidden_B', component_property='value'),
      ]
 )
-def test(*args):
+def A_placeholder(*args):
     ctx = dash.callback_context
     if not ctx.triggered:
         raise dash.exceptions.PreventUpdate
@@ -389,25 +388,88 @@ def test(*args):
     else:
 
         dire_list = list(map(int, args[-1].split(',')))
+    print("dire_list_A")
     print(dire_list)
+    print("radiant_list_A")
     print(radiant_list)
-
     btn_id = int(Enname_to_id_dict[str(ctx.triggered[0]['prop_id'].split('.')[0]).split("_A")[0]])
+
+    def check(l):
+        for i in l:
+            if(i==0):
+                return True
+        return False
     # 如果该英雄已经选择了，不更新
     if(btn_id in radiant_list or btn_id in dire_list):
         raise dash.exceptions.PreventUpdate
-    elif len(radiant_list)==5:
+    elif check(radiant_list)==False:
         raise dash.exceptions.PreventUpdate
     else:
-        radiant_list.append(btn_id)
+        for i in range(5):
+            if(radiant_list[i]==0):
+                radiant_list[i]=btn_id
+                break
+
 
     figure = []
     for i in range(len(radiant_list)):
-        figure.append(html.Img(id=str(i) + "_A",src = 'assets/hero_icon/'+id_to_Enname[str(radiant_list[i])]+"_full.png", className="hero-placeholder hero-img"))
-    for i in range(len(radiant_list),5):
-        figure.append(
-            html.Img(id=str(i) + "_A",
-                     className="hero-placeholder hero-img"))
+        if(radiant_list[i]!=0):
+            figure.append(html.Img(id=str(i) + "_A",src = 'assets/hero_icon/'+id_to_Enname[str(radiant_list[i])]+"_full.png", className="hero-placeholder hero-img"))
+        else:
+            figure.append(html.Img(id=str(i) + "_A", className="hero-placeholder hero-img"))
+
+    return figure
+
+@app.callback(
+    Output(component_id="B_placeholder",component_property="children"),
+    B_Input,
+    [State(component_id='hidden_A', component_property='value'),
+     State(component_id='hidden_B', component_property='value'),
+     ]
+)
+def B_place_holder(*args):
+    ctx = dash.callback_context
+    if not ctx.triggered:
+        raise dash.exceptions.PreventUpdate
+    if(args[-2] is None):
+        radiant_list = []
+    else:
+        radiant_list = list(map(int, args[-2].split(',')))
+    if (args[-1] is None):
+        dire_list = []
+    else:
+
+        dire_list = list(map(int, args[-1].split(',')))
+    print("dire_list_B")
+    print(dire_list)
+    print("radiant_list_B")
+    print(radiant_list)
+    btn_id = int(Enname_to_id_dict[str(ctx.triggered[0]['prop_id'].split('.')[0]).split("_B")[0]])
+
+    def check(l):
+        for i in l:
+            if(i==0):
+                return True
+        return False
+    # 如果该英雄已经选择了，不更新
+    if(btn_id in radiant_list or btn_id in dire_list):
+        raise dash.exceptions.PreventUpdate
+    elif check(dire_list)==False:
+        raise dash.exceptions.PreventUpdate
+    else:
+        for i in range(5):
+            if(dire_list[i]==0):
+                dire_list[i]=btn_id
+                break
+
+
+    figure = []
+    for i in range(len(dire_list)):
+        if(dire_list[i]!=0):
+            figure.append(html.Img(id=str(i) + "_B",src = 'assets/hero_icon/'+id_to_Enname[str(dire_list[i])]+"_full.png", className="hero-placeholder hero-img"))
+        else:
+            figure.append(html.Img(id=str(i) + "_B", className="hero-placeholder hero-img"))
+
 
     return figure
 
@@ -424,8 +486,8 @@ def test(*args):
 
 )
 def make_hero_relationship_figure(n_clicks,radiant,dire):
-    radiant_list = radiant.split(',')
-    dire_list = dire.split(',')
+    radiant_list = list(map(int,radiant.split(',')))
+    dire_list = list(map(int,dire.split(',')))
     conn = pymysql.connect(host='120.55.167.182', user='root', password='wda20190707', port=3306, database='dota')
     conn.ping()
     cursor = conn.cursor()
@@ -438,18 +500,13 @@ def make_hero_relationship_figure(n_clicks,radiant,dire):
     def query_win_rate(hero_id, target_hero_id):
         cursor.execute(query, (max_update_ymd, hero_id, target_hero_id))
         win_rate = cursor.fetchall()
-        # print(win_rate)
         if (len(win_rate) > 0 and len(win_rate[0]) > 0 and win_rate[0][0] is not None):
             return win_rate[0][0]
-            # if (win_rate[0][0] > 0.55 or win_rate[0][0] < 0.45):
-            #     return win_rate[0][0]
-            # else:
-            #     return None
         else:
             return 0
     z = []
-    x = list(map(lambda x:id_to_name_dict[x],radiant_list))
-    y = list(map(lambda x:id_to_name_dict[x],dire_list))
+    x = list(map(lambda x:id_to_name_dict[str(x)],radiant_list))
+    y = list(map(lambda x:id_to_name_dict[str(x)],dire_list))
     for i in range(5):
         tmp_z = []
         for j in range(5):
@@ -478,11 +535,10 @@ def make_dimension_graph(n_clicks,radiant,dire):
     cursor.execute("select sum(kong_zhi),sum(he_xin),sum(fu_zhu),sum(tao_sheng),sum(bao_fa),sum(xian_shou),sum(nai_jiu),sum(tui_jin) from dota.hero_stats "
                    +" where id = %s or id = %s or id = %s or id = %s or id = %s",(radiant_list[0],radiant_list[1],radiant_list[2],radiant_list[3],radiant_list[4]))
     radiant_dimension = list(cursor.fetchall()[0])
-    print(radiant_dimension)
     cursor.execute("select sum(kong_zhi),sum(he_xin),sum(fu_zhu),sum(tao_sheng),sum(bao_fa),sum(xian_shou),sum(nai_jiu),sum(tui_jin) from dota.hero_stats "
                    +" where id = %s or id = %s or id = %s or id = %s or id = %s",(dire_list[0],dire_list[1],dire_list[2],dire_list[3],dire_list[4]))
     dire_dimension = list(cursor.fetchall()[0])
-    print(dire_dimension)
+
     data = [
         dict(
             type = 'scatterpolar',
@@ -502,9 +558,36 @@ def make_dimension_graph(n_clicks,radiant,dire):
     dimension_graph_layout['title'] = '阵容能力维度分析'
     return dict(data = data,layout = dimension_graph_layout)
 
+@app.callback(
+    Output('hidden_A','value'),
+    [Input('A_placeholder','children')]
+)
+def place_holder_to_hidden(*args):
+    tmp = []
+    for arg in args[0]:
+        place_holder = arg['props']
+        if('src' not in dict(place_holder).keys()):
+            tmp.append("0")
+        else:
+            hero_name = (place_holder['src'].split("/")[-1]).split("_full.png")[0]
+        # {'id': '0_A', 'children': None, 'className': 'hero-placeholder hero-img', 'src': 'assets/hero_icon/abaddon_full.png'}
+            tmp.append(str(Enname_to_id_dict[hero_name]))
+    return ",".join(tmp)
 
-
-
-
+@app.callback(
+    Output('hidden_B','value'),
+    [Input('B_placeholder','children')]
+)
+def place_holder_to_hidden(*args):
+    tmp = []
+    for arg in args[0]:
+        place_holder = arg['props']
+        if('src' not in dict(place_holder).keys()):
+            tmp.append("0")
+        else:
+            hero_name = (place_holder['src'].split("/")[-1]).split("_full.png")[0]
+            tmp.append(str(Enname_to_id_dict[hero_name]))
+    print(",".join(tmp))
+    return ",".join(tmp)
 if __name__ == "__main__":
-    app.run_server(debug=False)
+    app.run_server(debug=True)

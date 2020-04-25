@@ -19,11 +19,23 @@ team_df = pd.read_sql("select team_id,team_name from dota.team",conn)
 team_df.columns = ['team_id','team_name']
 print(team_df)
 
+hero_stats_df = pd.read_sql("select id,hero_name_ch from dota.hero_stats",conn)
+hero_stats_df.columns = ['id','hero_name_ch']
+print(hero_stats_df)
+
 def get_options():
     options = []
+
     for index,item in team_df.iterrows():
+        if(index == 0):
+            init_value = item['team_id']
+        elif(index == 1):
+            init_value_2 = item['team_id']
         options.append( {"label":item['team_name'],"value":item['team_id']})
-    return options
+
+    return options,init_value,init_value_2
+
+options,init_value,init_value_2 = get_options()
 
 layout = dict(
     autosize=True,
@@ -38,7 +50,7 @@ layout = dict(
 )
 
 @app.callback(
-    Output("team_member","options"),
+    [Output("team_member","options"),Output("team_member","value")],
     [Input("team_select","value")]
 )
 def get_team_member(team_id):
@@ -56,10 +68,11 @@ def get_team_member(team_id):
             )
         cursor.close()
         conn.close()
-        return options
+        print(player_id_list)
+        return options,[player_id_list[0]]
 
 @app.callback(
-    Output("team_member_oppo","options"),
+    [Output("team_member_oppo","options"),Output("team_member_oppo","value")],
     [Input("team_select_oppo","value")]
 )
 def get_team_member(team_id):
@@ -77,7 +90,7 @@ def get_team_member(team_id):
             )
         cursor.close()
         conn.close()
-        return options
+        return options,[player_id_list[0]]
 
 @app.callback(
     Output("match_graph","figure"),
@@ -86,16 +99,14 @@ def get_team_member(team_id):
 def get_match_info(team_id,oppo_team_id):
     url = "https://api.opendota.com/api/teams/"+str(team_id)+"/matches?"
 
-    datas = requests.get(url).json()[:40]
+    datas = requests.get(url).json()[:100]
     wins = losses = 0
     for data in datas:
-        print(str(data['opposing_team_id'])==str(oppo_team_id))
         if(str(data['opposing_team_id'])==str(oppo_team_id)):
             if(data['radiant']==data['radiant_win']):
                 wins = wins + 1
             else:
                 losses = losses + 1
-    print([wins,losses])
     team_name = team_df[team_df['team_id']==int(team_id)]['team_name'].values.tolist()[0]
     oppo_team_name = team_df[team_df['team_id']==int(oppo_team_id)]['team_name'].values.tolist()[0]
     data = [
@@ -125,6 +136,62 @@ def get_match_info(team_id,oppo_team_id):
     [Input("team_select","value"),Input("team_select_oppo","value")]
 )
 def get_team_hero(team_id,oppo_team_id):
+    team_url = "https://api.opendota.com/api/teams/"+str(team_id)+"/heroes"
+    oppo_team_url = "https://api.opendota.com/api/teams/"+str(oppo_team_id)+"/heroes"
+    print(oppo_team_url)
+    team_datas = requests.get(team_url).json()[:10]
+    oppo_team_datas = requests.get(oppo_team_url).json()[:10]
+
+    team_name = team_df[team_df['team_id'] == int(team_id)]['team_name'].values.tolist()[0]
+    oppo_team_name = team_df[team_df['team_id'] == int(oppo_team_id)]['team_name'].values.tolist()[0]
+    def get_data(team_datas):
+        x = []
+        y = []
+        size = []
+        for data in team_datas:
+            x.append(data['localized_name'])
+            y.append(data['games_played'])
+            size.append(80*data['wins']/data['games_played'])
+        return x,y,size
+    x,y,size = get_data(team_datas)
+    x2,y2,size2 = get_data(oppo_team_datas)
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x = x,y = y,mode = 'markers',name = team_name,marker=dict(size = size,color = '#fac1b7')))
+    fig.add_trace(go.Scatter(x=  x2, y = y2, mode='markers',name = oppo_team_name,marker=dict(size=size2,color = '#a9bb95')))
+
+    fig.update_layout(title = '战队双方擅长英雄(前10名)',yaxis_title = "使用场次",xaxis_title = '英雄名称')
+    return fig
+
+@app.callback(
+    Output("duration_graph","figure"),
+    [Input("team_member","value"),Input("team_member_oppo","value"),
+    Input("team_select", "value"), Input("team_select_oppo", "value")],
+)
+def get_player_time(team_member_list,team_member_oppo_list,team_id,oppo_team_id):
+    team_name = team_df[team_df['team_id'] == int(team_id)]['team_name'].values.tolist()[0]
+    oppo_team_name = team_df[team_df['team_id'] == int(oppo_team_id)]['team_name'].values.tolist()[0]
+    duration_record_team = []
+    for player in team_member_list:
+        url = 'https://api.opendota.com/api/players/'+str(player)+'/recentMatches'
+        datas = requests.get(url).json()
+        duration = 0
+        for data in datas:
+            duration+=data['duration']/60
+        duration_record_team.append(duration)
+    duration_record_oppo_team = []
+    for player in team_member_oppo_list:
+        url = 'https://api.opendota.com/api/players/'+str(player)+'/recentMatches'
+        datas = requests.get(url).json()
+        duration = 0
+        for data in datas:
+            duration+=int(data['duration']/60)
+        duration_record_oppo_team.append(duration)
+    fig = go.Figure()
+    fig.add_trace(go.Bar(x=team_member_list,y=duration_record_team,name = team_name,marker_color='#fac1b7'))
+    fig.add_trace(go.Bar(x=team_member_oppo_list, y=duration_record_oppo_team, name=oppo_team_name,marker_color = '#a9bb95'))
+    fig.update_layout(title = '双方队友近期上线时长',xaxis_title = '队员名称',yaxis_title = '游戏时长(分钟)')
+    return fig
+
 
 team_layout = html.Div(
     [
@@ -137,7 +204,7 @@ team_layout = html.Div(
                             [
                                 html.H3(
                                     "战队信息查询",
-                                    style={"margin-bottom": "0px"},
+                                    style={"margin-bottom": "0px","color":"#FFFFFF"},
                                 )
                             ]
                         )
@@ -161,8 +228,8 @@ team_layout = html.Div(
                         ),
                         dcc.Dropdown(
                             id="team_select",
-                            options=get_options(),
-                            value='2586976',
+                            options=options,
+                            value = init_value,
                             className="dcc_control",
                         ),
                         html.P("战队成员", className="control_label"),
@@ -178,8 +245,9 @@ team_layout = html.Div(
                         ),
                         dcc.Dropdown(
                             id="team_select_oppo",
-                            options = get_options(),
-                            value='15',
+                            options = options,
+                            value = init_value_2,
+
                             className="dcc_control",
                         ),
                         html.P("敌方战队成员", className="control_label"),
@@ -278,7 +346,7 @@ team_layout = html.Div(
         html.Div(
             [
                 html.Div(
-                    [dcc.Graph(id="radiant_dire_graph")],
+                    [dcc.Graph(id="duration_graph")],
                     className="pretty_container five columns",
                 )
                 ,
