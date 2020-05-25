@@ -69,19 +69,15 @@ def get_match_data():
     return data
 
 def make_TPFN_figure():
-    TPFN_layout = copy.deepcopy(layout)
-    TPFN_layout['title'] = '分类结果混淆矩阵'
-    data = [
-        dict(
-            x=["T", "F"],
+    fig = go.Figure()
+    fig.add_trace(go.Heatmap(
+            x = ["T", "F"],
             y = ["P","N"],
             z = [[TP,TN],[FP,FN]],
             type = 'heatmap',
-            colorscale='Viridis'
-        )
-    ]
-    figure = dict(data=data,layout = TPFN_layout)
-    return figure
+            colorscale='Viridis' ))
+    fig.update_layout(title="分类结果混淆矩阵",xaxis_title = '预测类别',yaxis_title = '真实类别')
+    return fig
 
 def make_accuracy_figure():
     count_layout = copy.deepcopy(layout)
@@ -144,6 +140,15 @@ def make_loss_figure():
     figure = dict(data = data,layout=loss_layout)
     return figure
 
+def get_max_patch():
+    cursor = conn.cursor()
+    cursor.execute("select max(patch) from dota.match")
+    patch = cursor.fetchone()[0]
+    return patch
+
+
+
+
 model_layout = html.Div(
     [
         # empty Div to trigger javascript file for graph resizing
@@ -155,7 +160,7 @@ model_layout = html.Div(
                             [
                                 html.H3(
                                     "模型情况概览",
-                                    style={"margin-bottom": "0px"},
+                                    style={"margin-bottom": "0px","color":"#FFFFFF"},
                                 )
                             ]
                         )
@@ -181,22 +186,22 @@ model_layout = html.Div(
                         html.Div(
                             [
                                 html.Div(
-                                    [html.H6(accuracy_60,id="acc_60"), html.P(">60% 准确率")],
+                                    [html.H6(str(round(accuracy_60*100,2))+"%",id="acc_60"), html.P(">60% 准确率")],
                                     id="wells",
                                     className="mini_container",
                                 ),
                                 html.Div(
-                                    [html.H6(accuracy_75,id="acc_70"), html.P(">70% 准确率")],
+                                    [html.H6(str(round(accuracy_75*100,2))+"%",id="acc_70"), html.P(">70% 准确率")],
                                     id="gas",
                                     className="mini_container",
                                 ),
                                 html.Div(
-                                    [html.H6(accuracy_80,id="acc_80"), html.P(">80% 准确率")],
+                                    [html.H6(str(round(accuracy_80*100,2))+"%",id="acc_80"), html.P(">80% 准确率")],
                                     id="oil",
                                     className="mini_container",
                                 ),
                                 html.Div(
-                                    [html.H6("41",id="model_update_time"), html.P("模型对应版本")],
+                                    [html.H6(get_max_patch(),id="model_update_time"), html.P("模型对应版本")],
                                     id="water",
                                     className="mini_container",
                                 ),
@@ -244,7 +249,7 @@ model_layout = html.Div(
                 # )
                 # ,
                 html.Div(
-                    html.Img(src="assets/hero_embdding.png",style={"text-align":"center"}),
+                    html.Img(src="assets/hero_embdding_2.png",style={"text-align":"center"}),
                     className="pretty_container",
                 ),
             ],

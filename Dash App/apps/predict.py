@@ -14,7 +14,7 @@ import dash_cytoscape as cyto
 import requests
 import plotly.graph_objects as go
 
-keras.backend.clear_session()  # 计算图清空，防止越来越慢
+# keras.backend.clear_session()  # 计算图清空，防止越来越慢
 headers = {'Accept': 'text/html, application/xhtml+xml, image/jxr, */*',
            'Accept - Encoding': 'gzip, deflate',
            'Accept-Language': 'zh-Hans-CN, zh-Hans; q=0.5',
@@ -30,7 +30,7 @@ hero_stats_df['win_rate'] = hero_stats_df['pro_win'] / hero_stats_df['pro_pick']
 id_to_name_dict = {}
 for index, items in hero_stats_df.iterrows():
     id_to_name_dict[str(items[0])] = items[3]
-print(id_to_name_dict)
+# print(id_to_name_dict)
 conn = pymysql.connect(host='120.55.167.182', user='root', password='wda20190707', port=3306, database='dota')
 player_id_list = ['152461420', '205144888', '143182355', '89115202', '140973920', '255319952', '129365110', '260241404',
                   '207212099', '187938206']
@@ -87,14 +87,19 @@ def generate_select(hero_name = None):
     return model
 
 
+def generate_no_select_button(*args):
+    model = []
+    A_or_B = args[0]
+    for i in range(5):
+        model.append(html.Div(id = str(i)+"_"+A_or_B+"_no_select",className="no-select",role="button",tabIndex="0"))
 
-
+    return html.Div(children=model,id = A_or_B+"_no_select_button")
 
 def generate_placeholder(*args):
     model = []
     A_or_B = args[0]
     for i in range(5):
-        model.append(html.Img(id = str(i)+"_"+A_or_B,className="hero-placeholder hero-img",role="button"))
+        model.append(html.Img(id = str(i)+"_"+A_or_B,className="hero-placeholder hero-img",role="button",src= 'assets/timg.png'))
 
     return html.Div(children=model,id = A_or_B+"_placeholder")
 
@@ -169,6 +174,23 @@ predict_layout = html.Div(
 
                                                  ]
                                                  ),
+                                            html.Div(className="TBDUn",
+                                                     children=[
+                                                         html.Div(className="team-container", children=
+                                                         [
+                                                          generate_no_select_button("A"),
+                                                          ]
+
+                                                                  ),
+                                                         html.Div("取消选择", className="seperator"),
+                                                         html.Div(className="team-container",
+                                                                  children=[
+
+                                                                      generate_no_select_button("B"),
+                                                                      ])
+
+                                                     ]
+                                                     ),
                                         html.Div(className="TBDUn",
                                                  children=[
                                                      html.Div(className="team-container",children=
@@ -262,24 +284,33 @@ def update_output_div(input_value):
 
 )
 def inference(n_clicks,radiant,dire):
-    try:
-        sample_in = []
-        radiant_list = list(map(int, radiant.split(',')))
-        dire_list = list(map(int, dire.split(',')))
-        radiant_vector = np.zeros(hero_id_max)
-        dire_vector = np.zeros(hero_id_max)
-        for item in radiant_list:
-            radiant_vector[int(item) - 1] = 1
-        for item in dire_list:
-            dire_vector[int(item) - 1] = 1
+    if(n_clicks == 0):
+        return "请选择英雄和玩家"
 
-        sample_in.append([radiant_vector, dire_vector])
-        sample_in = np.array(sample_in).reshape(len(sample_in),2,hero_id_max)
-        model = load_model(model_saved_path)
-        out0 = model.predict(sample_in)
-        return "预测天辉方胜率为 "+str(round(out0[0][0]*100,2))+"%"
-    except:
-        raise dash.exceptions.PreventUpdate
+    # try:
+    sample_in = []
+    radiant_list = list(map(int, radiant.split(',')))
+    dire_list = list(map(int, dire.split(',')))
+    radiant_vector = np.zeros(hero_id_max)
+    dire_vector = np.zeros(hero_id_max)
+    for item in radiant_list:
+        if(int(item)==0):
+            return "天辉方阵容不完整"
+        radiant_vector[int(item) - 1] = 1
+    for item in dire_list:
+        if(int(item)==0):
+            return "夜魇方阵容不完整"
+        dire_vector[int(item) - 1] = 1
+
+    sample_in.append([radiant_vector, dire_vector])
+    sample_in = np.array(sample_in).reshape(len(sample_in),2,hero_id_max)
+    keras.backend.clear_session()
+    model = load_model(model_saved_path)
+    out0 = model.predict(sample_in)
+    return "预测天辉方胜率为 "+str(round(out0[0][0]*100,2))+"%"
+    # except Exception:
+    #     print(Exception)
+    #     raise dash.exceptions.PreventUpdate
 
 @app.callback(
     Output(component_id="hero_win_rate_graph",component_property="figure"),
@@ -416,7 +447,7 @@ def A_placeholder(*args):
         if(radiant_list[i]!=0):
             figure.append(html.Img(id=str(i) + "_A",src = 'assets/hero_icon/'+id_to_Enname[str(radiant_list[i])]+"_full.png", className="hero-placeholder hero-img"))
         else:
-            figure.append(html.Img(id=str(i) + "_A", className="hero-placeholder hero-img"))
+            figure.append(html.Img(id=str(i) + "_A", className="hero-placeholder hero-img",src= 'assets/timg.png'))
 
     return figure
 
@@ -468,13 +499,25 @@ def B_place_holder(*args):
         if(dire_list[i]!=0):
             figure.append(html.Img(id=str(i) + "_B",src = 'assets/hero_icon/'+id_to_Enname[str(dire_list[i])]+"_full.png", className="hero-placeholder hero-img"))
         else:
-            figure.append(html.Img(id=str(i) + "_B", className="hero-placeholder hero-img"))
+            figure.append(html.Img(id=str(i) + "_B", className="hero-placeholder hero-img",src = 'assets/timg.png'))
 
 
     return figure
 
 
+for i in range(5):
+    for team in ["A","B"]:
+        @app.callback(
+            dash.dependencies.Output(str(i)+"_"+team, 'src'),
+            [dash.dependencies.Input(str(i)+"_"+team+"_no_select", 'n_clicks')]
+        )
 
+        def remove(n_clicks):
+            ctx = dash.callback_context
+            if not ctx.triggered:
+                raise dash.exceptions.PreventUpdate
+            else:
+                return "assets/timg.png"
 
 
 @app.callback(
@@ -488,6 +531,8 @@ def B_place_holder(*args):
 def make_hero_relationship_figure(n_clicks,radiant,dire):
     radiant_list = list(map(int,radiant.split(',')))
     dire_list = list(map(int,dire.split(',')))
+    if(0 in radiant_list or 0 in dire_list):
+        raise dash.exceptions.PreventUpdate
     conn = pymysql.connect(host='120.55.167.182', user='root', password='wda20190707', port=3306, database='dota')
     conn.ping()
     cursor = conn.cursor()
@@ -495,7 +540,7 @@ def make_hero_relationship_figure(n_clicks,radiant,dire):
     cursor.execute(max_update_ymd_sql)
     max_update_ymd_list = cursor.fetchall()
     max_update_ymd = max_update_ymd_list[0]
-    query = "select win_rate from hero_relationship where update_ymd = %s and hero_id = %s and target_hero_id = %s and match_count > 10"
+    query = "select win_rate from hero_relationship where update_ymd = %s and hero_id = %s and target_hero_id = %s"
 
     def query_win_rate(hero_id, target_hero_id):
         cursor.execute(query, (max_update_ymd, hero_id, target_hero_id))
@@ -560,13 +605,15 @@ def make_dimension_graph(n_clicks,radiant,dire):
 
 @app.callback(
     Output('hidden_A','value'),
-    [Input('A_placeholder','children')]
+    [Input('A_placeholder','children'),Input('1_A','src'),
+     Input('0_A','src'),Input('2_A','src'),Input('3_A','src'),Input('4_A','src')]
 )
 def place_holder_to_hidden(*args):
     tmp = []
     for arg in args[0]:
         place_holder = arg['props']
-        if('src' not in dict(place_holder).keys()):
+        print(place_holder['src'])
+        if(place_holder['src']=='assets/timg.png'):
             tmp.append("0")
         else:
             hero_name = (place_holder['src'].split("/")[-1]).split("_full.png")[0]
@@ -576,13 +623,14 @@ def place_holder_to_hidden(*args):
 
 @app.callback(
     Output('hidden_B','value'),
-    [Input('B_placeholder','children')]
+    [Input('B_placeholder','children'),Input('1_B','src'),
+     Input('0_B','src'),Input('2_B','src'),Input('3_B','src'),Input('4_B','src')]
 )
 def place_holder_to_hidden(*args):
     tmp = []
     for arg in args[0]:
         place_holder = arg['props']
-        if('src' not in dict(place_holder).keys()):
+        if(place_holder['src']=='assets/timg.png'):
             tmp.append("0")
         else:
             hero_name = (place_holder['src'].split("/")[-1]).split("_full.png")[0]
@@ -590,4 +638,4 @@ def place_holder_to_hidden(*args):
     print(",".join(tmp))
     return ",".join(tmp)
 if __name__ == "__main__":
-    app.run_server(debug=True)
+    app.run_server(debug=False)

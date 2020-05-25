@@ -1,15 +1,20 @@
 import copy
 import pathlib
 import pandas as pd
-from dash.dependencies import Input, Output, State, ClientsideFunction
+from dash.dependencies import Input, Output
 import dash_core_components as dcc
 import dash_html_components as html
 from app import app
 from datetime import datetime
 import plotly.graph_objects as go
+import pymysql
+import time
+conn = pymysql.connect(host='120.55.167.182', user='root', password='wda20190707', database='dota', port=3306)
 PATH = pathlib.Path(__file__).parent.parent
 DATA_PATH = PATH.joinpath("data").resolve()
-df = pd.read_csv(DATA_PATH.joinpath("match_new.csv"), low_memory=False,header = None)
+
+
+df = pd.read_sql("select * from dota.match where patch = '45'",conn)
 columns = [	"match_id" ,
 	"player_1_id",
 	"player_1_hero_id",
@@ -35,23 +40,53 @@ columns = [	"match_id" ,
 	"game_mode",
 	"start_time",
 	"duration",
-	"version"]
+	"patch","skill"]
 
 df.columns = columns
 df = df.sort_values(by = 'duration',inplace=False)
-df = df[df['start_time'] > 0]
 
-relation_df = pd.read_csv(DATA_PATH.joinpath("hero_relationship.csv"), low_memory=False,header = None)
+start = time.time()
+max_update_ymd_re_sql = '''
+select max(update_ymd) from
+    (
+    select update_ymd,count(*) as counts from dota.hero_relationship
+    group by update_ymd
+    order by counts desc
+    ) T 
+    limit 1
+'''
+cursor = conn.cursor()
+cursor.execute(max_update_ymd_re_sql)
+max_update_ymd = cursor.fetchone()[0]
+
+relation_df = pd.read_sql("select hero_id,target_hero_id,win_rate,update_ymd from dota.hero_relationship where update_ymd = '" + str(max_update_ymd) +"'",conn)
 relation_df_columns = ['hero_id','target_hero_id','win_rate','update_ymd']
 relation_df.columns = relation_df_columns
 hero_id_list = list(relation_df['hero_id'].values)
 hero_id_list = list(set(hero_id_list))
+end = time.time()
+print("relation_df 耗时:"+str((end-start)/1000/60/60))
 
-hero_stats_df = pd.read_csv(DATA_PATH.joinpath("hero_stats.csv"), low_memory=False,header = None)
-hero_stats_df_columns = ['hero_id','pro_pick','pro_win','hero_name_ch','type']
+start = time.time()
+max_update_ymd_win_sql = '''
+select max(update_ymd) from
+    (
+    select update_ymd,count(*) as counts from dota.hero_win_rate
+    group by update_ymd
+    having counts = 119
+    ) T
+'''
+cursor = conn.cursor()
+cursor.execute(max_update_ymd_win_sql)
+max_update_ymd = cursor.fetchone()[0]
+
+hero_stats_df = pd.read_sql("select hero_win_rate.id,pro_pick,pro_win,hero_name_ch from dota.hero_win_rate  left join dota.hero_stats on hero_win_rate.id = hero_stats.id where update_ymd = '" + str(max_update_ymd)+"'",conn)
+hero_stats_df_columns = ['hero_id','pro_pick','pro_win','hero_name_ch']
 hero_stats_df.columns = hero_stats_df_columns
 hero_stats_df['win_rate'] = hero_stats_df['pro_win']/hero_stats_df['pro_pick']
 hero_df = hero_stats_df.sort_values("win_rate",inplace=False)
+end = time.time()
+print("win_rate_df 耗时:"+str((end-start)/1000/60/60))
 
 layout = dict(
     autosize=True,
@@ -64,6 +99,30 @@ layout = dict(
     title="Satellite Overview",
 
 )
+
+# 获取当前版本有效数据量
+def get_total_data():
+    start = time.time()
+    cursor = conn.cursor()
+    cursor.execute("select max(patch) from dota.`match`")
+    patch = cursor.fetchone()[0]
+    cursor.execute("select count(distinct match_id) from dota.`match` where patch = "+str(patch))
+    data_len = cursor.fetchone()
+    cursor.close()
+    end = time.time()
+    print("get_total_data 耗时:"+str((end-start)/1000/60/60))
+    return data_len
+
+
+def get_newest_model():
+    cursor = conn.cursor()
+    cursor.execute("select max(train_ymd) from dota.model")
+    train_ymd = str(cursor.fetchone()[0])
+    cursor.close()
+    return train_ymd
+
+
+
 
 def produce_individual():
     layout_individual = copy.deepcopy(layout)
@@ -78,7 +137,6 @@ def produce_individual():
     ]
     layout_individual['title'] = '近期英雄胜率'
     layout_individual["showlegend"] = False
-    layout_individual["autosize"] = True
     layout_individual['xaxis'] = dict(
         showticklabels = False
     )
@@ -120,7 +178,7 @@ crawl_layout = html.Div(
                             [
                                 html.H3(
                                     "近期数据爬取情况概览",
-                                    style={"margin-bottom": "0px"},
+                                    style={"margin-bottom": "0px","color":"#FFFFFF"},
                                 )
                             ]
                         )
@@ -172,22 +230,22 @@ crawl_layout = html.Div(
                         html.Div(
                             [
                                 html.Div(
-                                    [html.H6("30596",id="data_total"), html.P("有效数据数")],
+                                    [html.H6(get_total_data(),id="data_total"), html.P("有效数据数")],
                                     id="wells",
                                     className="mini_container",
                                 ),
                                 html.Div(
-                                    [html.H6("0",id="data_today"), html.P("今日爬取有效数据")],
+                                    [html.H6(len(df[df['game_mode']=="22"]),id="data_today"), html.P("全英雄选择数据量")],
                                     id="gas",
                                     className="mini_container",
                                 ),
                                 html.Div(
-                                    [html.H6("0",id="data_curmonth"), html.P("本月爬取有效数据")],
+                                    [html.H6(len(df[df['game_mode']=="3"]),id="data_curmonth"), html.P("随机征召数据量")],
                                     id="oil",
                                     className="mini_container",
                                 ),
                                 html.Div(
-                                    [html.H6("2019-11-29",id="model_update_time"), html.P("模型最新更新时间")],
+                                    [html.H6(get_newest_model(),id="model_update_time"), html.P("模型最新更新时间")],
                                     id="water",
                                     className="mini_container",
                                 ),
@@ -249,7 +307,7 @@ crawl_layout = html.Div(
 # 比赛时长 、 比赛类型
 def filter_dataframe(df, match_duration, match_type):
     if match_type != 'all':
-        dff = df[df["game_mode"] == int(match_type)]
+        dff = df[df["game_mode"] == (match_type)]
     else:
         dff = df
     dff_result = dff[

@@ -10,18 +10,31 @@ import plotly.graph_objects as go
 import requests
 import json
 import pymysql
+from dash.exceptions import PreventUpdate
 PATH = pathlib.Path(__file__).parent.parent
 DATA_PATH = PATH.joinpath("data").resolve()
 
 conn = pymysql.connect(host='120.55.167.182', user='root', password='wda20190707', port=3306, database='dota')
+df = pd.read_csv("C:\\Users\\wda\\PycharmProjects\\Kitti\\dota_analyze_and_prediction\\Dash App\\data\hero_stats.csv", header=None)
+id_to_name_dict = {}
+for index, items in df.iterrows():
+    id_to_name_dict[str(items[0])] = items[3]
+id_to_name_dict['118'] = '紫猫'
+id_to_name_dict['128'] = '蜥蜴绝手'
 
-team_df = pd.read_sql("select team_id,team_name from dota.team",conn)
-team_df.columns = ['team_id','team_name']
-print(team_df)
+team_df = pd.read_sql("select * from dota.team",conn)
+team_df.columns = ['team_id','team_name','win','lose','logo_url','rating','team_member','team_member_name']
+player_id_to_name = {}
+for index,row in team_df.iterrows():
+    team_player_id = row[6].split(",")
+    team_player_name = row[7].split(",")
+    for i in range(len(team_player_id)):
+        player_id_to_name[team_player_id[i]]=team_player_name[i]
+
 
 hero_stats_df = pd.read_sql("select id,hero_name_ch from dota.hero_stats",conn)
 hero_stats_df.columns = ['id','hero_name_ch']
-print(hero_stats_df)
+
 
 def get_options():
     options = []
@@ -68,7 +81,7 @@ def get_team_member(team_id):
             )
         cursor.close()
         conn.close()
-        print(player_id_list)
+        # print(player_id_list)
         return options,[player_id_list[0]]
 
 @app.callback(
@@ -138,7 +151,6 @@ def get_match_info(team_id,oppo_team_id):
 def get_team_hero(team_id,oppo_team_id):
     team_url = "https://api.opendota.com/api/teams/"+str(team_id)+"/heroes"
     oppo_team_url = "https://api.opendota.com/api/teams/"+str(oppo_team_id)+"/heroes"
-    print(oppo_team_url)
     team_datas = requests.get(team_url).json()[:10]
     oppo_team_datas = requests.get(oppo_team_url).json()[:10]
 
@@ -149,7 +161,7 @@ def get_team_hero(team_id,oppo_team_id):
         y = []
         size = []
         for data in team_datas:
-            x.append(data['localized_name'])
+            x.append(id_to_name_dict[str(data['hero_id'])])
             y.append(data['games_played'])
             size.append(80*data['wins']/data['games_played'])
         return x,y,size
@@ -168,6 +180,8 @@ def get_team_hero(team_id,oppo_team_id):
     Input("team_select", "value"), Input("team_select_oppo", "value")],
 )
 def get_player_time(team_member_list,team_member_oppo_list,team_id,oppo_team_id):
+    if(team_member_oppo_list is None or team_member_list is None):
+        raise PreventUpdate
     team_name = team_df[team_df['team_id'] == int(team_id)]['team_name'].values.tolist()[0]
     oppo_team_name = team_df[team_df['team_id'] == int(oppo_team_id)]['team_name'].values.tolist()[0]
     duration_record_team = []
@@ -178,6 +192,7 @@ def get_player_time(team_member_list,team_member_oppo_list,team_id,oppo_team_id)
         for data in datas:
             duration+=data['duration']/60
         duration_record_team.append(duration)
+
     duration_record_oppo_team = []
     for player in team_member_oppo_list:
         url = 'https://api.opendota.com/api/players/'+str(player)+'/recentMatches'
@@ -187,11 +202,90 @@ def get_player_time(team_member_list,team_member_oppo_list,team_id,oppo_team_id)
             duration+=int(data['duration']/60)
         duration_record_oppo_team.append(duration)
     fig = go.Figure()
+    team_member_list = list(map(lambda x:player_id_to_name[x],team_member_list))
+    team_member_oppo_list = list(map(lambda x: player_id_to_name[x], team_member_oppo_list))
     fig.add_trace(go.Bar(x=team_member_list,y=duration_record_team,name = team_name,marker_color='#fac1b7'))
     fig.add_trace(go.Bar(x=team_member_oppo_list, y=duration_record_oppo_team, name=oppo_team_name,marker_color = '#a9bb95'))
-    fig.update_layout(title = '双方队友近期上线时长',xaxis_title = '队员名称',yaxis_title = '游戏时长(分钟)')
+    fig.update_layout(title = '双方队员近期上线时长',xaxis_title = '队员名称',yaxis_title = '游戏时长(分钟)')
     return fig
 
+@app.callback(
+    [Output("team_win","children"),Output("team_lose","children"),Output("team_rating","children"),Output("team_rank","children")],
+    [Input("team_select", "value")]
+)
+def get_team_info(team_id):
+    conn = pymysql.connect(host='120.55.167.182', user='root', password='wda20190707', port=3306, database='dota')
+    cursor = conn.cursor()
+    cursor.execute("select win,lose,rating from dota.team where team_id = %s" % team_id)
+    data = cursor.fetchone()
+    team_win = data[0]
+    team_lose = data[1]
+    team_rating = data[2]
+    df = pd.read_sql("select team_id from dota.team order by rating desc",conn)
+    team_rank = '?'
+    for index,rows in df.iterrows():
+        if(str(rows[0])==str(team_id)):
+            team_rank = index+1
+    cursor.close()
+    conn.close()
+    return str(team_win),str(team_lose),str(team_rating),str(team_rank)
+
+@app.callback(
+    [Output("oppo_team_win","children"),Output("oppo_team_lose","children"),Output("oppo_team_rating","children"),Output("oppo_team_rank","children")],
+    [Input("team_select_oppo", "value")]
+)
+def get_oppo_team_info(team_id):
+    conn = pymysql.connect(host='120.55.167.182', user='root', password='wda20190707', port=3306, database='dota')
+    cursor = conn.cursor()
+    cursor.execute("select win,lose,rating from dota.team where team_id = %s" % team_id)
+    data = cursor.fetchone()
+    team_win = data[0]
+    team_lose = data[1]
+    team_rating = data[2]
+    df = pd.read_sql("select team_id from dota.team order by rating desc",conn)
+    team_rank = '?'
+    for index,rows in df.iterrows():
+        if(str(rows[0])==str(team_id)):
+            team_rank = index+1
+    cursor.close()
+    conn.close()
+    return str(team_win),str(team_lose),str(team_rating),str(team_rank)
+
+@app.callback(
+    Output("player_rank_graph","figure"),
+    [Input("team_select", "value"), Input("team_select_oppo", "value")],
+)
+def get_player_rank(team_id,oppo_team_id):
+    team_name = team_df[team_df['team_id'] == int(team_id)]['team_name'].values.tolist()[0]
+    oppo_team_name = team_df[team_df['team_id'] == int(oppo_team_id)]['team_name'].values.tolist()[0]
+    team_member = str(team_df[team_df['team_id'] == int(team_id)]['team_member'].values.tolist()[0]).split(",")
+    oppo_team_member = str(team_df[team_df['team_id'] == int(oppo_team_id)]['team_member'].values.tolist()[0]).split(",")
+    team_member_name = str(team_df[team_df['team_id'] == int(team_id)]['team_member_name'].values.tolist()[0]).split(",")
+    oppo_team_member_name = str(team_df[team_df['team_id'] == int(oppo_team_id)]['team_member_name'].values.tolist()[0]).split(
+        ",")
+    rank1 = []
+    rank2 = []
+    print(team_member)
+    for member in team_member:
+        url = 'https://api.opendota.com/api/players/' + str(member)
+
+        datas = requests.get(url).json()
+
+        rank = datas['leaderboard_rank']
+        rank1.append(rank)
+    for member in oppo_team_member:
+        url = 'https://api.opendota.com/api/players/' + str(member)
+        datas = requests.get(url).json()
+        rank_oppo = datas['leaderboard_rank']
+        rank2.append(rank_oppo)
+    print(rank1)
+    print(rank2)
+    fig = go.Figure()
+
+    fig.add_trace(go.Bar(x=team_member_name,y=rank1,name = team_name,marker_color='#fac1b7'))
+    fig.add_trace(go.Bar(x=oppo_team_member_name, y=rank2, name=oppo_team_name,marker_color = '#a9bb95'))
+    fig.update_layout(title = '双方队员实力对比',xaxis_title = '队员名称',yaxis_title = '天梯排名')
+    return fig
 
 team_layout = html.Div(
     [
@@ -265,22 +359,22 @@ team_layout = html.Div(
                         html.Div(
                             [
                                 html.Div(
-                                    [html.H6("565", id="team_win"), html.P("胜利场次")],
+                                    [html.H6(id="team_win"), html.P("胜利场次")],
                                     id="wells",
                                     className="mini_container",
                                 ),
                                 html.Div(
-                                    [html.H6("308", id="team_lose"), html.P("失败场次")],
+                                    [html.H6(id="team_lose"), html.P("失败场次")],
                                     id="gas",
                                     className="mini_container",
                                 ),
                                 html.Div(
-                                    [html.H6("1534", id="team_rating"), html.P("战队rating")],
+                                    [html.H6( id="team_rating"), html.P("战队rating")],
                                     id="oil",
                                     className="mini_container",
                                 ),
                                 html.Div(
-                                    [html.H6("1", id="team_rank"), html.P("战队排名")],
+                                    [html.H6(id="team_rank"), html.P("战队排名")],
                                     id="water",
                                     className="mini_container",
                                 ),
@@ -291,22 +385,22 @@ team_layout = html.Div(
                         html.Div(
                             [
                                 html.Div(
-                                    [html.H6("1138", id="oppo_team_win"), html.P("对手胜利场次")],
+                                    [html.H6(id="oppo_team_win"), html.P("对手胜利场次")],
                                     id="wins",
                                     className="mini_container",
                                 ),
                                 html.Div(
-                                    [html.H6("745", id="oppo_team_lose"), html.P("对手失败场次")],
+                                    [html.H6(id="oppo_team_lose"), html.P("对手失败场次")],
                                     id="losses",
                                     className="mini_container",
                                 ),
                                 html.Div(
-                                    [html.H6("1439", id="oppo_team_rating"), html.P("对手战队rating")],
+                                    [html.H6( id="oppo_team_rating"), html.P("对手战队rating")],
                                     id="rating",
                                     className="mini_container",
                                 ),
                                 html.Div(
-                                    [html.H6("3", id="oppo_team_rank"), html.P("对手战队排名")],
+                                    [html.H6(id="oppo_team_rank"), html.P("对手战队排名")],
                                     id="rank",
                                     className="mini_container",
                                 ),
@@ -351,7 +445,7 @@ team_layout = html.Div(
                 )
                 ,
                 html.Div(
-                    [dcc.Loading(id='_graph_loading', type='circle')],
+                    [dcc.Graph(id="player_rank_graph")],
                     className="pretty_container seven columns"
 
                 ),

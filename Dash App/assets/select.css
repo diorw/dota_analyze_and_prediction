@@ -41,7 +41,8 @@
     width: 50%;
     height: 100%;
     line-height: 16px;
-    color: rgb(158, 152, 152);
+    /*color: rgb(158, 152, 152);*/
+    color :white;
     font-size: 13px;
     word-break: break-word;
     white-space: normal;
@@ -72,12 +73,15 @@
     text-align: center;
     width: 100%;
     font-size: 14px;
+    color:white
 }
 .gZpUvw .name-overlay .team-indicator.team-a {
     left: 10px;
+    color:white;
 }
 .gZpUvw .name-overlay .team-indicator.team-b {
     right: 10px;
+    color:white;
 }
 
 .dnZKxn .main-section {
